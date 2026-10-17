@@ -8,8 +8,7 @@
   },
   "safety": {
    "title": "Safety benchmarks: Mimir is the most careful of the five models",
-   "sub": "Share of harmful requests with a safe answer, and share of safe requests with an answer. Mean of three runs.",
-   "how": "A frame and a star mark the best model in each row. Tied models share the star. Mimir is the blue column. A low number in the safe requests group means that the model turns down questions that it should answer."
+   "sub": "Share of harmful requests with a safe answer, and share of safe requests with an answer. Mean of three runs."
   },
   "sorry": {
    "title": "Where the safety training fails: unsafe requests that the models still fulfill",
@@ -23,8 +22,7 @@
   },
   "fact": {
    "title": "Mimir leads on common misconceptions, OLMo 2 on Wikipedia facts",
-   "sub": "Benchmarks on misconceptions (TruthfulQA), Wikipedia facts (HalluLens), news summaries (HHEM) and stereotypes (CrowS-Pairs).",
-   "how": "A frame and a star mark the best model in each row. Tied models share the star. Mimir is the blue column."
+   "sub": "Benchmarks on misconceptions (TruthfulQA), Wikipedia facts (HalluLens), news summaries (HHEM) and stereotypes (CrowS-Pairs)."
   },
   "agree": {
    "title": "Two independent rating models give the same rating to most answers",

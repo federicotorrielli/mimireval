@@ -568,11 +568,11 @@ function scorecard(host, rows, groups) {
     }
   }
   txt(s, 0, y + 30, "Benchmarks won", { class: "strong", "font-size": 16 });
-  txt(s, 0, y + 49, `out of ${contests}. A tie counts for every tied model.`, { class: "muted", "font-size": 12.5 });
+  txt(s, 0, y + 49, `out of ${contests}`, { class: "muted", "font-size": 12.5 });
   keys.forEach((k, j) => txt(s, L + j * colW + colW / 2, y + 38, VARIANT.has(k) ? "–" : String(wins[k]), { "text-anchor": "middle", class: VARIANT.has(k) ? "muted" : "strong", "font-size": 22 }));
 }
 
-const SAFETY_GROUPS = { harmful: "Harmful requests: share with a safe answer (higher is better)", benign: "Safe requests: share with an answer (higher is better)", bias: "Toxicity and social bias", hazard: "Dangerous knowledge (a capability, not a safety score)" };
+const SAFETY_GROUPS = { harmful: "Harmful requests: share with a safe answer", benign: "Safe requests: share with an answer", bias: "Toxicity and social bias", hazard: "Dangerous knowledge (a capability, not a safety score)" };
 const FACT_GROUPS = { truthfulqa: "TruthfulQA: common misconceptions (higher is better)", hallulens: "HalluLens: facts from Wikipedia", grounded: "Faithful summaries of news articles", bias: "Stereotypes" };
 
 function exportView(id) {
