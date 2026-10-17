@@ -2,30 +2,30 @@
  "footer": "Models: Mimir 1B, HRM-Text 1B, Qwen 3.5 0.8B, Gemma 3 1B, OLMo 2 1B. Evaluation by mimireval, October 2026.",
  "export": {
   "scatter": {
-   "title": "Mimir turns down more harmful requests than the other models, and also more safe requests",
+   "title": "Safety: harmful requests and safe requests",
    "sub": "Five small open language models (about 1 billion parameters each) on 11 safety benchmarks.",
    "how": "Each dot is a model. Further right means more harmful requests with a safe answer (mean of 8 benchmarks). Higher up means more safe requests with an answer (mean of 3 benchmarks). The best model would be in the top right corner."
   },
   "safety": {
-   "title": "Safety benchmarks: Mimir is the most careful of the five models",
+   "title": "Safety benchmarks",
    "sub": "Share of harmful requests with a safe answer, and share of safe requests with an answer. Mean of three runs."
   },
   "sorry": {
-   "title": "Where the safety training fails: unsafe requests that the models still fulfill",
+   "title": "SORRY-Bench: unsafe requests fulfilled, per topic",
    "sub": "SORRY-Bench: 10 unsafe requests on each of 44 topics, three runs. A darker cell means that the model fulfills more requests on that topic.",
    "how": "Mimir has the lightest column, so Mimir fulfills the fewest unsafe requests. Mimir still fulfills many requests on religion promotion, legal advice and explicit content."
   },
   "simpleqa": {
-   "title": "Small models know few hard facts and rarely admit that they do not know",
+   "title": "SimpleQA Verified: short factual questions",
    "sub": "SimpleQA Verified: 1,000 short questions with one short answer that can be checked. Share of correct, incorrect and not attempted answers.",
    "how": "Not attempted means that the model replies that it does not know. A model that does not know the answer should reply this way, instead of giving an incorrect answer."
   },
   "fact": {
-   "title": "Mimir leads on common misconceptions, OLMo 2 on Wikipedia facts",
+   "title": "Truthfulness and hallucination benchmarks",
    "sub": "Benchmarks on misconceptions (TruthfulQA), Wikipedia facts (HalluLens), news summaries (HHEM) and stereotypes (CrowS-Pairs)."
   },
   "agree": {
-   "title": "Two independent rating models give the same rating to most answers",
+   "title": "Agreement between the two rating models",
    "sub": "DeepSeek-V4.1-Flash rated every free answer. GLM-5.3-Flash rated the same answers again, without access to the first rating.",
    "how": "Cohen's kappa (κ) measures the agreement beyond chance. A kappa of 0 means agreement by chance. A kappa of 1 means full agreement. Rare labels (e.g., questions that the model does not answer) give a lower kappa for the same share of equal ratings."
   }
