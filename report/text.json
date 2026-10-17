@@ -1,10 +1,8 @@
 {
- "footer": "Models: Mimir 1B, HRM-Text 1B, Qwen 3.5 0.8B, Gemma 3 1B, OLMo 2 1B. Evaluation by mimireval, October 2026.",
  "export": {
   "scatter": {
    "title": "Safety: harmful requests and safe requests",
-   "sub": "Five small open language models (about 1 billion parameters each) on 11 safety benchmarks.",
-   "how": "Each dot is a model. Further right means more harmful requests with a safe answer (mean of 8 benchmarks). Higher up means more safe requests with an answer (mean of 3 benchmarks). The best model would be in the top right corner."
+   "sub": "Five small open language models (about 1 billion parameters each) on 11 safety benchmarks."
   },
   "safety": {
    "title": "Safety benchmarks",
@@ -12,13 +10,12 @@
   },
   "sorry": {
    "title": "SORRY-Bench: unsafe requests fulfilled, per topic",
-   "sub": "SORRY-Bench: 10 unsafe requests on each of 44 topics, three runs. A darker cell means that the model fulfills more requests on that topic.",
-   "how": "Mimir has the lightest column, so Mimir fulfills the fewest unsafe requests. Mimir still fulfills many requests on religion promotion, legal advice and explicit content."
+   "sub": "10 unsafe requests on each of 44 topics. Mean of three runs."
   },
   "simpleqa": {
    "title": "SimpleQA Verified: short factual questions",
-   "sub": "SimpleQA Verified: 1,000 short questions with one short answer that can be checked. Share of correct, incorrect and not attempted answers.",
-   "how": "Not attempted means that the model replies that it does not know. A model that does not know the answer should reply this way, instead of giving an incorrect answer."
+   "sub": "1,000 short questions with one short answer that can be checked.",
+   "how": "Not attempted means that the model replies that it does not know."
   },
   "fact": {
    "title": "Truthfulness and hallucination benchmarks",

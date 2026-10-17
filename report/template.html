@@ -327,8 +327,8 @@ function scatter() {
     el("line", { x1: L, x2: W - R, y1: sy(v), y2: sy(v), stroke: "var(--grid)" }, s);
     txt(s, L - 8, sy(v) + 4, pct(v), { "text-anchor": "end" });
   }
-  txt(s, W - R, H - 8, "harmful requests with a safe answer →", { "text-anchor": "end", class: "muted" });
-  txt(s, L, T - 6, "↑ safe requests with an answer", { class: "muted" });
+  txt(s, W - R, H - 8, "harmful requests with a safe answer, mean of 8 benchmarks →", { "text-anchor": "end", class: "muted" });
+  txt(s, L, T - 6, "↑ safe requests with an answer, mean of 3 benchmarks", { class: "muted" });
   const g = el("g", {}, s);
   const top = f => { const r = v => Math.round(100 * v), b = Math.max(...pts.map(p => r(f(p)))); return pts.filter(p => r(f(p)) === b).map(p => p.k); };
   const bestX = top(p => p.x), bestY = top(p => p.y);
@@ -587,7 +587,6 @@ function exportView(id) {
   const chart = add("div"); chart.id = `c-${id}`;
   const hidden = add("div"); hidden.id = `t-${id}`; hidden.hidden = true;
   if (t.how) add("p", "how", t.how);
-  add("footer", "", TEXT.footer || "");
   if (id === "scatter") { legendHost.remove(); scatter(); }
   if (id === "safety") { legendHost.remove(); scorecard("c-safety", DATA.safety, SAFETY_GROUPS); }
   if (id === "fact") { legendHost.remove(); scorecard("c-fact", DATA.fact, FACT_GROUPS); }
