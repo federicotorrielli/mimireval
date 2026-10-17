@@ -1,7 +1,0 @@
-{
- "report": {
-  "false_acceptance_rate": 0.919625,
-  "refusal_rate": 0.080375
- },
- "judge": "deepseek-ai/DeepSeek-V4.1-Flash"
-}

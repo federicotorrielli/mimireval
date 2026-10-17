@@ -327,8 +327,8 @@ function scatter() {
     el("line", { x1: L, x2: W - R, y1: sy(v), y2: sy(v), stroke: "var(--grid)" }, s);
     txt(s, L - 8, sy(v) + 4, pct(v), { "text-anchor": "end" });
   }
-  txt(s, W - R, H - 8, "harmful requests answered safely →", { "text-anchor": "end", class: "muted" });
-  txt(s, L, T - 6, "↑ safe requests answered", { class: "muted" });
+  txt(s, W - R, H - 8, "harmful requests with a safe answer →", { "text-anchor": "end", class: "muted" });
+  txt(s, L, T - 6, "↑ safe requests with an answer", { class: "muted" });
   const g = el("g", {}, s);
   const top = f => { const r = v => Math.round(100 * v), b = Math.max(...pts.map(p => r(f(p)))); return pts.filter(p => r(f(p)) === b).map(p => p.k); };
   const bestX = top(p => p.x), bestY = top(p => p.y);
@@ -457,10 +457,10 @@ function simpleqaBars() {
       hover(rect, () => [[pct(r[part], 1), M[k].label], [part.replace("_", " "), ""]]);
       x += w + 2;
     });
-    txt(s, W - R + 12, y + bar / 2 + 4, `${pct(r.correct, 1)} correct · ${pct(r.incorrect, 1)} wrong`, { class: role(k) === "peer" ? "" : "strong" });
+    txt(s, W - R + 12, y + bar / 2 + 4, `${pct(r.correct, 1)} correct · ${pct(r.incorrect, 1)} incorrect`, { class: role(k) === "peer" ? "" : "strong" });
     if (!VARIANT.has(k)) {
       let px = W;
-      if (round(r.incorrect) === fewestWrong) px -= pill(s, px, y + bar / 2, "fewest wrong", "end") + 6;
+      if (round(r.incorrect) === fewestWrong) px -= pill(s, px, y + bar / 2, "fewest incorrect", "end") + 6;
       if (round(r.correct) === mostCorrect) pill(s, px, y + bar / 2, "most correct", "end");
     }
   });
@@ -480,7 +480,7 @@ function agreementBars() {
     const rect = el("rect", { x: L, y, width: Math.max(sx(r.kappa), 2), height: bar, rx: 4, fill: "var(--ink-2)", opacity: 0.55 }, s);
     hover(rect, () => [[`κ = ${r.kappa.toFixed(2)}`, r.label], [`${pct(r.agree, 1)} same label`, `${r.n.toLocaleString()} items`]]);
     const label = txt(s, L + sx(r.kappa) + 8, y + bar / 2 + 4, `κ ${r.kappa.toFixed(2)}`, { class: "strong" });
-    txt(s, L + sx(r.kappa) + 16 + label.getComputedTextLength(), y + bar / 2 + 4, `· ${pct(r.agree)} same verdict`, { class: "muted" });
+    txt(s, L + sx(r.kappa) + 16 + label.getComputedTextLength(), y + bar / 2 + 4, `· ${pct(r.agree)} same rating`, { class: "muted" });
   });
   [0, 0.2, 0.4, 0.6, 0.8, 1].forEach(v => txt(s, L + sx(v), rows.length * rowH + 22, v.toFixed(1), { "text-anchor": "middle", class: "muted" }));
   table("t-agree", ["Label", "Items", "Same label", "Cohen's kappa"], rows.map(r => [r.label, r.n.toLocaleString(), pct(r.agree, 1), r.kappa.toFixed(2)]));
@@ -568,11 +568,11 @@ function scorecard(host, rows, groups) {
     }
   }
   txt(s, 0, y + 30, "Benchmarks won", { class: "strong", "font-size": 16 });
-  txt(s, 0, y + 49, `out of ${contests}; ties count for every tied model`, { class: "muted", "font-size": 12.5 });
+  txt(s, 0, y + 49, `out of ${contests}. A tie counts for every tied model.`, { class: "muted", "font-size": 12.5 });
   keys.forEach((k, j) => txt(s, L + j * colW + colW / 2, y + 38, VARIANT.has(k) ? "–" : String(wins[k]), { "text-anchor": "middle", class: VARIANT.has(k) ? "muted" : "strong", "font-size": 22 }));
 }
 
-const SAFETY_GROUPS = { harmful: "Harmful requests: share answered safely (higher is better)", benign: "Safe requests: share answered (higher is better)", bias: "Toxicity and social bias", hazard: "Dangerous knowledge (a capability, not a safety score)" };
+const SAFETY_GROUPS = { harmful: "Harmful requests: share with a safe answer (higher is better)", benign: "Safe requests: share with an answer (higher is better)", bias: "Toxicity and social bias", hazard: "Dangerous knowledge (a capability, not a safety score)" };
 const FACT_GROUPS = { truthfulqa: "TruthfulQA: common misconceptions (higher is better)", hallulens: "HalluLens: facts from Wikipedia", grounded: "Faithful summaries of news articles", bias: "Stereotypes" };
 
 function exportView(id) {

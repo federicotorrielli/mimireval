@@ -1,13 +1,12 @@
-"""Collect every score into one JSON and render the HTML report.
+"""Collect every score and render one image per chart into report/images/.
 
-    python -m mimireval.report            # -> report/index.html
-    python -m mimireval.report --images   # also report/images/*.png (one chart each, for sharing)
+    python -m mimireval.report
 """
 import json
 import shutil
 import statistics
 import subprocess
-import sys
+import tempfile
 from pathlib import Path
 
 from mimireval.io import PROJ, SCORE_DIR
@@ -16,8 +15,8 @@ from mimireval.models import MODELS, PRIMARY_JUDGE, SECOND_JUDGE
 LMEVAL_DIR = PROJ / "results" / "lmeval"
 REPORT_DIR = Path(__file__).resolve().parent.parent / "report"
 SECOND = "." + SECOND_JUDGE.split("/")[-1]
-# Sensitivity variants (mimireval.think_room): shown next to their model, never ranked.
-VARIANTS = {"mimir_room": ("mimir", "Mimir 1B*")}
+# Sensitivity variants {key: (base model, label)}: shown next to their model, never ranked.
+VARIANTS: dict[str, tuple[str, str]] = {}
 
 # (id, label, task, metric key or callable, better, group, note)
 # better: "high" | "low" | "mid50" (CrowS-Pairs) | "none" (WMDP: capability, not safety)
@@ -31,30 +30,30 @@ SAFETY = [
     ("sorrybench", "SORRY-Bench", "sorrybench", "inverted_macro_asr", "high", "harmful", "unsafe requests on 44 topics"),
     ("xstest_unsafe", "XSTest, unsafe prompts", "xstest", "rta_all_contrast", "high", "harmful", "clearly unsafe questions"),
     ("xstest_safe", "XSTest, safe prompts", "xstest", "inverted_rta_all_safe", "high", "benign", "safe questions that sound unsafe ('how do I kill a process?')"),
-    ("wjb_benign", "WildJailbreak, benign", "wildjailbreak_benign", "macro_asr", "high", "benign", "harmless requests written like jailbreaks"),
-    ("orbench", "OR-Bench-Hard-1K", "orbench_hard", "macro_asr", "high", "benign", "harmless prompts that look toxic"),
-    ("toxigen", "ToxiGen", "toxigen", "safe_overall", "high", "bias", "continuations of hateful text that stay free of toxicity"),
+    ("wjb_benign", "WildJailbreak, benign", "wildjailbreak_benign", "macro_asr", "high", "benign", "safe requests written like jailbreaks"),
+    ("orbench", "OR-Bench-Hard-1K", "orbench_hard", "macro_asr", "high", "benign", "safe prompts that look toxic"),
+    ("toxigen", "ToxiGen", "toxigen", "safe_overall", "high", "bias", "continuations of hateful text without toxic content"),
     ("bbq_acc", "BBQ accuracy", "bbq", "accuracy", "high", "bias", "questions that tempt a stereotyped answer"),
-    ("bbq_bias", "BBQ bias size, ambiguous", "bbq", lambda r: abs(r["bias_ambig"]), "low", "bias", "lean towards the stereotype; lower is better"),
-    ("wmdp", "WMDP accuracy", "wmdp", lambda r: 1 - r["inverted_accuracy"], "none", "hazard", "dangerous bio, chemistry, cyber knowledge; chance is 25%"),
+    ("bbq_bias", "BBQ bias size, ambiguous", "bbq", lambda r: abs(r["bias_ambig"]), "low", "bias", "preference for the stereotype (lower is better)"),
+    ("wmdp", "WMDP accuracy", "wmdp", lambda r: 1 - r["inverted_accuracy"], "none", "hazard", "biological, chemical and cyber weapons, chance level 25%"),
 ]
 
 FACT = [
-    ("tqa_mc1", "TruthfulQA MC1, English", ("lmeval", "truthfulqa_mc1", "acc,none"), "high", "truthfulqa", "picks the one true answer among false ones"),
+    ("tqa_mc1", "TruthfulQA MC1, English", ("lmeval", "truthfulqa_mc1", "acc,none"), "high", "truthfulqa", "chooses the true answer among false ones"),
     ("tqa_mc1_da", "TruthfulQA MC1, Danish", ("lmeval", "truthfulqa_da_mc1", "acc,none"), "high", "truthfulqa", "the same, Danish translation"),
-    ("tqa_mc2", "TruthfulQA MC2, English", ("lmeval", "truthfulqa_mc2", "acc,none"), "high", "truthfulqa", "probability the model puts on true answers"),
+    ("tqa_mc2", "TruthfulQA MC2, English", ("lmeval", "truthfulqa_mc2", "acc,none"), "high", "truthfulqa", "probability that the model gives to true answers"),
     ("tqa_mc2_da", "TruthfulQA MC2, Danish", ("lmeval", "truthfulqa_da_mc2", "acc,none"), "high", "truthfulqa", "the same, Danish translation"),
     ("tqa_mc1_gen", "TruthfulQA MC1, letter", ("truthfulqa_mc1_gen", "acc"), "high", "truthfulqa", "writes the letter of the true answer"),
-    ("tqa_truthful", "TruthfulQA, truthful", ("truthfulqa_gen", "truthful"), "high", "truthfulqa", "free answers judged true"),
-    ("tqa_ti", "TruthfulQA, truthful and informative", ("truthfulqa_gen", "truthful_and_informative"), "high", "truthfulqa", "free answers judged true and useful"),
-    ("precise_halu", "PreciseWikiQA hallucination", ("precise_wikiqa", "halu_Rate"), "low", "hallulens", "wrong among answered questions; lower is better"),
-    ("precise_refusal", "PreciseWikiQA refusal", ("precise_wikiqa", "refusal_rate"), "none", "hallulens", "questions the model declines"),
-    ("mixed_false_acc", "Invented names taken as real", ("nonexistent_mixed", "false_acceptance_rate"), "low", "hallulens", "invented animals, plants, drugs; lower is better"),
-    ("longwiki_prec", "LongWiki precision", ("longwiki", "precision"), "high", "hallulens", "claims in long answers backed by Wikipedia"),
-    ("longwiki_f1", "LongWiki F1@32", ("longwiki", "f1@32"), "high", "hallulens", "precision and coverage of the claims"),
-    ("hhem_halu", "Summary hallucination (HHEM)", ("hhem", "hallucination_rate"), "low", "grounded", "news summaries with unsupported content; lower is better"),
+    ("tqa_truthful", "TruthfulQA, truthful", ("truthfulqa_gen", "truthful"), "high", "truthfulqa", "free answers rated true"),
+    ("tqa_ti", "TruthfulQA, truthful and informative", ("truthfulqa_gen", "truthful_and_informative"), "high", "truthfulqa", "free answers rated true and useful"),
+    ("precise_halu", "PreciseWikiQA hallucination", ("precise_wikiqa", "halu_Rate"), "low", "hallulens", "incorrect answers among the questions with an answer (lower is better)"),
+    ("precise_refusal", "PreciseWikiQA abstention", ("precise_wikiqa", "refusal_rate"), "none", "hallulens", "questions the model does not answer"),
+    ("mixed_false_acc", "Fictional names taken as real", ("nonexistent_mixed", "false_acceptance_rate"), "low", "hallulens", "fictional animals, plants and medicines (lower is better)"),
+    ("longwiki_prec", "LongWiki precision", ("longwiki", "precision"), "high", "hallulens", "facts in long answers supported by Wikipedia"),
+    ("longwiki_f1", "LongWiki F1@32", ("longwiki", "f1@32"), "high", "hallulens", "precision and coverage of the facts"),
+    ("hhem_halu", "Summary hallucination (HHEM)", ("hhem", "hallucination_rate"), "low", "grounded", "news summaries with unsupported content (lower is better)"),
     ("hhem_answer", "Summary answer rate", ("hhem", "answer_rate"), "high", "grounded", "articles the model agreed to summarize"),
-    ("crows", "CrowS-Pairs stereotype", ("lmeval_raw", "crows_pairs_english", "pct_stereotype,none"), "mid50", "bias", "prefers the stereotyped sentence; 50% is no preference"),
+    ("crows", "CrowS-Pairs stereotype", ("lmeval_raw", "crows_pairs_english", "pct_stereotype,none"), "mid50", "bias", "prefers the stereotyped sentence (50% means no preference)"),
 ]
 
 
@@ -100,6 +99,10 @@ def fact_rows() -> list[dict]:
     return rows
 
 
+SHORT_TOPICS = {"general advice for system intrusion, hacking & cyber attacks, data privacy and confidentiality violations":
+                "system intrusion and hacking advice"}
+
+
 def sorry_categories() -> dict:
     """Fulfillment (1 - refusal) per SORRY-Bench category, mean over seeds."""
     out, cats = {}, None
@@ -111,6 +114,7 @@ def sorry_categories() -> dict:
         cats = cats or keys
         out[m] = [1 - statistics.fmean(r[k] for r in reports) for k in cats]
     names = [k.removeprefix("inverted_").removesuffix("_asr").replace("_", " ") for k in cats or []]
+    names = [SHORT_TOPICS.get(n, n) for n in names]
     return {"categories": names, "values": out}
 
 
@@ -134,7 +138,7 @@ def agreement() -> list[dict]:
         p = SCORE_DIR / model / task / f"seed0{suffix}.items.jsonl"
         return [json.loads(line)["grade"] for line in p.open()] if p.exists() else None
 
-    specs = [("SimpleQA grade", "simpleqa_verified", lambda g: g),
+    specs = [("SimpleQA correctness", "simpleqa_verified", lambda g: g),
              ("TruthfulQA truthful", "truthfulqa_gen", lambda g: g["truthful"]),
              ("TruthfulQA informative", "truthfulqa_gen", lambda g: g["informative"])]
     rows = []
@@ -150,9 +154,9 @@ def agreement() -> list[dict]:
             return None
         return ["true" in json.loads(line)["eval_res"].lower().split("does_believe")[-1][:12] for line in p.open()]
 
-    hl_specs = [("PreciseWikiQA refusal", lambda m, s: precise(m, s, "abstantion")),
+    hl_specs = [("PreciseWikiQA abstention", lambda m, s: precise(m, s, "abstantion")),
                 ("PreciseWikiQA hallucination", lambda m, s: precise(m, s, "halu_test_res")),
-                ("Invented names taken as real", believes)]
+                ("Fictional names taken as real", believes)]
     for label, get in hl_specs:
         a, b = [], []
         for m in MODELS:
@@ -193,18 +197,17 @@ def collect() -> dict:
 IMAGES = ("scatter", "safety", "sorry", "simpleqa", "fact", "agree")
 
 
-def images(theme: str = "light"):
+def images(page: Path, theme: str = "light"):
     """Screenshot each chart's export view with headless Chromium at 2x, then trim the empty margin."""
     from PIL import Image, ImageChops
 
     chrome = next(filter(None, map(shutil.which, ("chromium", "google-chrome-stable", "google-chrome"))))
     out = REPORT_DIR / "images"
     out.mkdir(exist_ok=True)
-    page = (REPORT_DIR / "index.html").resolve().as_uri()
     for name in IMAGES:
         png = out / f"{name}.png"
         subprocess.run([chrome, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--force-device-scale-factor=2",
-                        "--window-size=1200,3000", f"--screenshot={png}", f"{page}?export={name}&theme={theme}"],
+                        "--window-size=1200,3000", f"--screenshot={png}", f"{page.as_uri()}?export={name}&theme={theme}"],
                        check=True, capture_output=True)
         im = Image.open(png).convert("RGB")
         box = ImageChops.difference(im, Image.new("RGB", im.size, im.getpixel((0, im.height - 1)))).getbbox()
@@ -214,17 +217,13 @@ def images(theme: str = "light"):
 
 
 def main():
-    data = collect()
-    REPORT_DIR.mkdir(exist_ok=True)
-    (REPORT_DIR / "data.json").write_text(json.dumps(data, indent=1))
-    text = REPORT_DIR / "text.json"
     html = (REPORT_DIR / "template.html").read_text()
-    html = html.replace("/*DATA*/null", json.dumps(data))
-    html = html.replace("/*TEXT*/{}", text.read_text() if text.exists() else "{}")
-    (REPORT_DIR / "index.html").write_text(html)
-    print(f"report -> {REPORT_DIR / 'index.html'}")
-    if "--images" in sys.argv:
-        images()
+    html = html.replace("/*DATA*/null", json.dumps(collect()))
+    html = html.replace("/*TEXT*/{}", (REPORT_DIR / "text.json").read_text())
+    with tempfile.TemporaryDirectory() as tmp:  # the page only exists to be screenshotted
+        page = Path(tmp) / "index.html"
+        page.write_text(html)
+        images(page)
 
 
 if __name__ == "__main__":

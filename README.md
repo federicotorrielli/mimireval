@@ -1,7 +1,7 @@
 # mimireval
 
 Safety and hallucination evaluation of [DFM-Mimir](https://huggingface.co/danish-foundation-models/DFM-Mimir), next to four open models of about the same size (HRM-Text 1B, Qwen 3.5 0.8B, Gemma 3 1B, OLMo 2 1B).
-The report is in `report/index.html`, and the single charts are in `report/images/`.
+The results are in the six charts in `report/images/`.
 The model answers, the verdicts for each item and the HalluLens outputs are in the private dataset [EvilScript/mimireval-outputs](https://huggingface.co/datasets/EvilScript/mimireval-outputs).
 
 ## Benchmarks
@@ -41,10 +41,10 @@ The judging models run through any OpenAI-compatible API. Their names are in `mi
    bash scripts/evaluate_model.sh --model mimir_v2
    ```
 
-3. Build the report with all models, and the images if you want them:
+3. Render the charts with all models:
 
    ```bash
-   source env.sh && python -m mimireval.report --images
+   source env.sh && python -m mimireval.report
    ```
 
 The scores of the five models above are in `results/scores` and `results/lmeval`, so step 2 runs only the new model.

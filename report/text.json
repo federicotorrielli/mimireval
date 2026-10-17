@@ -1,49 +1,35 @@
 {
- "lede": "We tested Mimir 1B, a Danish language model, on 15 safety measures and 15 hallucination measures, next to four open models of about the same size. Mimir refuses harmful requests more often than every other model in the group. It also refuses more safe requests than the others.",
- "txt-tradeoff": "A safe assistant has two jobs. It refuses a harmful request, e.g., instructions for a weapon. It also answers a safe request, even when the request sounds dangerous. Mimir answers 91% of the harmful requests in a safe way (mean of eight benchmarks), and this is the best result of the five models. HRM-Text 1B has the same architecture as Mimir, but different training data, and it answers only 39% of the harmful requests in a safe way. On the safe requests the order flips: Mimir answers 66% of them, while the other four models answer between 81% and 86%.",
- "txt-safety": "Mimir leads in particular on jailbreaks, i.e., prompts written to trick a model into breaking its rules. On WildJailbreak, where the harmful request hides inside a long story, Mimir refuses 87% of the requests, against 66% for the next best model (OLMo 2) and 3% for HRM-Text. The weak point is OR-Bench-Hard: these prompts are harmless but contain words that look toxic, and Mimir answers only 31% of them. On the bias question set BBQ, Mimir answers 82% of the questions correctly, against 52% or less for the other models, with a similar lean towards stereotypes. Mimir's model card says that the model is not specifically aligned for safety. Its training data contains refusal examples from public instruction datasets (e.g., Tulu 3), and these examples are the most likely source of this behavior.",
- "txt-sorry": "SORRY-Bench asks 10 unsafe requests on each of 44 topics. Mimir helps with 11% of them on average, the lowest share of the group. The remaining failures concentrate on a few topics: Mimir writes promotion of a religion in 53% of the cases, legal advice in 50%, and explicit sexual content in 40%. Questions on violence, crime and malware are almost always refused.",
- "notes": [
-  "Models: Mimir 1B (danish-foundation-models/DFM-Mimir, commit 396df88), HRM-Text 1B, Qwen 3.5 0.8B, Gemma 3 1B and OLMo 2 1B, every model with its own chat format.",
-  "Mimir reads the prompt in both directions before it writes the answer (a prefix language model). We kept this behavior exact in every step, and we checked it against the reference implementation of the authors.",
-  "Safety: Ai2 safety-eval suite, plus SORRY-Bench and OR-Bench-Hard-1K. Answers are sampled (temperature 0.7) three times; numbers are the mean of the three runs. Open classifiers judge the answers (WildGuard, the SORRY-Bench judge, the StrongREJECT judge).",
-  "Hallucination: SimpleQA Verified, TruthfulQA, HalluLens (PreciseWikiQA, LongWiki, invented entities) and the Vectara summary set with HHEM-2.1-Open. Answers are greedy. DeepSeek-V4.1-Flash judges the free answers; GLM-5.3-Flash judges them a second time to measure agreement.",
-  "Differences from the original setups: the original judge models of TruthfulQA and HalluLens are retired or local only, so an API model replaces them. HalluLens runs once instead of three times, and its web-search task is left out. The Wikipedia database for LongWiki comes from a public copy on Hugging Face.",
-  "All code, the exact data revisions and the raw answers are in the mimireval repository."
- ],
  "footer": "Models: Mimir 1B, HRM-Text 1B, Qwen 3.5 0.8B, Gemma 3 1B, OLMo 2 1B. Evaluation by mimireval, October 2026.",
  "export": {
   "scatter": {
-   "title": "Mimir refuses harmful requests most often, but it also refuses more safe ones",
+   "title": "Mimir turns down more harmful requests than the other models, and also more safe requests",
    "sub": "Five small open language models (about 1 billion parameters each) on 11 safety benchmarks.",
-   "how": "Each dot is a model. Further right: more harmful requests answered safely (mean of 8 benchmarks). Higher up: more safe requests answered (mean of 3 benchmarks). The ideal model sits in the top right corner."
+   "how": "Each dot is a model. Further right means more harmful requests with a safe answer (mean of 8 benchmarks). Higher up means more safe requests with an answer (mean of 3 benchmarks). The best model would be in the top right corner."
   },
   "safety": {
    "title": "Safety benchmarks: Mimir is the most careful of the five models",
-   "sub": "Share of answers judged safe on harmful requests, and share of answers given on safe requests. Mean of three runs.",
-   "how": "A frame and a star mark the best model in each row; tied models share it. Mimir is the blue column. A low number in the safe requests group means that the model refuses questions it should answer."
+   "sub": "Share of harmful requests with a safe answer, and share of safe requests with an answer. Mean of three runs.",
+   "how": "A frame and a star mark the best model in each row. Tied models share the star. Mimir is the blue column. A low number in the safe requests group means that the model turns down questions that it should answer."
   },
   "sorry": {
-   "title": "Where the refusals fail: unsafe requests that the models still fulfill",
-   "sub": "SORRY-Bench: 10 unsafe requests on each of 44 topics, three runs. Darker cells mean that the model helps more often.",
-   "how": "A light column is a model that refuses almost everything on that topic. Mimir's column is the lightest, with gaps on religion, legal advice and explicit content."
+   "title": "Where the safety training fails: unsafe requests that the models still fulfill",
+   "sub": "SORRY-Bench: 10 unsafe requests on each of 44 topics, three runs. A darker cell means that the model fulfills more requests on that topic.",
+   "how": "Mimir has the lightest column, so Mimir fulfills the fewest unsafe requests. Mimir still fulfills many requests on religion promotion, legal advice and explicit content."
   },
   "simpleqa": {
-   "title": "Small models know few hard facts, and they rarely say that they do not know",
-   "sub": "SimpleQA Verified: 1,000 short questions with one checkable answer. Share of correct, wrong and not attempted answers.",
-   "how": "Green: correct. Red: wrong. Gray: the model declined to answer. A model that does not know should decline instead of guessing. Mimir 1B* is Mimir with room to finish its reasoning; it is not ranked."
+   "title": "Small models know few hard facts and rarely admit that they do not know",
+   "sub": "SimpleQA Verified: 1,000 short questions with one short answer that can be checked. Share of correct, incorrect and not attempted answers.",
+   "how": "Not attempted means that the model replies that it does not know. A model that does not know the answer should reply this way, instead of giving an incorrect answer."
   },
   "fact": {
-   "title": "Truthfulness and hallucination: Mimir leads on common misconceptions",
+   "title": "Mimir leads on common misconceptions, OLMo 2 on Wikipedia facts",
    "sub": "Benchmarks on misconceptions (TruthfulQA), Wikipedia facts (HalluLens), news summaries (HHEM) and stereotypes (CrowS-Pairs).",
-   "how": "A frame and a star mark the best model in each row; tied models share it. Mimir 1B* is Mimir with room to finish its reasoning; it is not ranked."
+   "how": "A frame and a star mark the best model in each row. Tied models share the star. Mimir is the blue column."
   },
   "agree": {
-   "title": "Two independent judge models agree on most verdicts",
-   "sub": "DeepSeek-V4.1-Flash judged every free answer. GLM-5.3-Flash judged the same answers again, without seeing the first verdict.",
-   "how": "Cohen's kappa corrects the agreement for chance: 0 means chance agreement, 1 means full agreement. Rare labels (e.g., refusals) give a lower kappa for the same share of equal verdicts."
+   "title": "Two independent rating models give the same rating to most answers",
+   "sub": "DeepSeek-V4.1-Flash rated every free answer. GLM-5.3-Flash rated the same answers again, without access to the first rating.",
+   "how": "Cohen's kappa (κ) measures the agreement beyond chance. A kappa of 0 means agreement by chance. A kappa of 1 means full agreement. Rare labels (e.g., questions that the model does not answer) give a lower kappa for the same share of equal ratings."
   }
- },
- "txt-simpleqa": "SimpleQA Verified asks 1,000 short questions with one checkable answer, e.g., the year of a minor award. Models of this size know very few of these facts: every model answers between 2.0% and 2.5% of the questions correctly. The more telling part is what a model does when it does not know. A careful model says so, and the answer counts as not attempted. A careless model gives a wrong answer instead. OLMo 2 declines 12.5% of the questions and Mimir declines 5.6%. Qwen 3.5 and Gemma 3 almost never decline (1.5%).",
- "txt-fact": "TruthfulQA tests common misconceptions, e.g., what happens if you crack your knuckles a lot. Mimir is the best model of the group in every TruthfulQA format. It picks the true answer among false ones more often, in English (34%) and in Danish (36%). Its free answers are judged true in 34% of the cases, against 31% for OLMo 2 and 8% to 24% for the other models. HalluLens asks questions about less known Wikipedia pages. When the small models answer these questions, the answer is wrong in 95% to 97% of the cases. Only OLMo 2 declines more than 2% of them. In LongWiki, each model writes a long answer about a Wikipedia topic. The judging model splits the answer into single facts and checks each fact against passages from Wikipedia. OLMo 2 is the best model here: 36% of its facts are supported, against 27% for Mimir and 19% to 29% for the other models. The second judging model gives the same order. HalluLens also contains questions about fictional animals, plants and medicines. Every model accepts more than 92% of these fictional names as real. OLMo 2 does so least often (93%), and Mimir does so in 96% of the cases. In the summaries of news articles, Mimir adds content that is not in the article in 12.6% of the cases. Qwen 3.5 does this least often (2.2%). On CrowS-Pairs, Mimir shows no preference for the stereotyped sentence (49.5%, where 50% means no preference). Mimir sometimes starts a reasoning block between <think> tags, also when nobody asked for it. Under the short length limits of these benchmarks, the reasoning often stops before the answer (about one answer in five on HalluLens). We therefore scored a second version, Mimir 1B*, which had room to finish its reasoning. The results hardly change: the share of true TruthfulQA answers goes from 34% to 40%, and the PreciseWikiQA errors stay at 97%."
+ }
 }
