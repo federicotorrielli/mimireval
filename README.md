@@ -2,6 +2,7 @@
 
 Safety and hallucination evaluation of [DFM-Mimir](https://huggingface.co/danish-foundation-models/DFM-Mimir), next to four open models of about the same size (HRM-Text 1B, Qwen 3.5 0.8B, Gemma 3 1B, OLMo 2 1B).
 The report is in `report/index.html`, and the single charts are in `report/images/`.
+The model answers, the verdicts for each item and the HalluLens outputs are in the private dataset [EvilScript/mimireval-outputs](https://huggingface.co/datasets/EvilScript/mimireval-outputs).
 
 ## Benchmarks
 
