@@ -1,0 +1,8 @@
+{
+ "report": {
+  "halu_Rate": 0.9687877567458719,
+  "refusal_rate": 0.0068,
+  "correct_rate": 0.031
+ },
+ "judge": "zai-org/GLM-5.3-Flash"
+}

@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mimir: safety and hallucination evaluation</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10);
+  --focus: #2a78d6; --compare: #eb6834; --peer: #a8a69f;
+  --correct: #1baf7a; --wrong: #e34948; --abstain: #c3c2b7;
+  --seq: #cde2fb,#b7d3f6,#9ec5f4,#86b6ef,#6da7ec,#5598e7,#3987e5,#2a78d6,#256abf,#1c5cab,#184f95,#104281,#0d366b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+    --focus: #3987e5; --compare: #d95926; --peer: #6b6a64;
+    --correct: #199e70; --wrong: #e66767; --abstain: #4a4945;
+    --seq: #0d366b,#104281,#184f95,#1c5cab,#256abf,#2a78d6,#3987e5,#5598e7,#6da7ec,#86b6ef,#9ec5f4,#b7d3f6,#cde2fb;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+  --focus: #3987e5; --compare: #d95926; --peer: #6b6a64;
+  --correct: #199e70; --wrong: #e66767; --abstain: #4a4945;
+  --seq: #0d366b,#104281,#184f95,#1c5cab,#256abf,#2a78d6,#3987e5,#5598e7,#6da7ec,#86b6ef,#9ec5f4,#b7d3f6,#cde2fb;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 40px 20px 80px; }
+header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0 0 6px; font-weight: 650; letter-spacing: -0.01em; }
+h2 { font-size: 20px; margin: 48px 0 6px; font-weight: 620; }
+h3 { font-size: 15px; margin: 0 0 2px; font-weight: 600; }
+p { margin: 8px 0; max-width: 74ch; }
+.sub { color: var(--ink-2); }
+.small { font-size: 13px; color: var(--ink-2); }
+button { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 5px 11px; cursor: pointer; }
+button:hover { background: color-mix(in srgb, var(--surface), var(--ink) 5%); }
+button[aria-pressed="true"] { border-color: var(--ink-2); font-weight: 600; }
+.controls { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 0; margin: 20px 0 4px; background: var(--page); border-bottom: 1px solid var(--grid); }
+.controls .label { color: var(--ink-2); font-size: 13px; margin-right: 4px; }
+.key { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 24px 0 8px; }
+.tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 14px 16px; }
+.tile .v { font-size: 34px; font-weight: 620; line-height: 1.1; margin: 4px 0; }
+.tile .l { font-size: 13px; color: var(--ink-2); }
+.tile .d { font-size: 13px; color: var(--ink-2); }
+figure { margin: 16px 0; background: var(--surface); border: 1px solid var(--ring); border-radius: 14px; padding: 18px 18px 10px; }
+figure .head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+figcaption { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--ink-2); font-size: 12px; }
+svg .ink { fill: var(--ink); }
+svg .muted { fill: var(--muted); }
+svg .strong { fill: var(--ink); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--ink-2); margin: 8px 0 2px; }
+details { margin: 6px 0 4px; }
+summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
+table { border-collapse: collapse; font-size: 13px; margin: 8px 0; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--grid); }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 600; color: var(--ink-2); }
+.tip { position: fixed; pointer-events: none; z-index: 20; background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 7px 10px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: none; max-width: 320px; }
+.tip b { display: block; font-size: 15px; color: var(--ink); }
+.tip span { color: var(--ink-2); }
+.hit { fill: transparent; cursor: default; }
+.hit:focus { outline: none; }
+.hit:focus-visible { stroke: var(--ink-2); stroke-width: 1; }
+ul.notes { padding-left: 18px; max-width: 74ch; }
+ul.notes li { margin: 4px 0; }
+code { font-size: 13px; background: color-mix(in srgb, var(--surface), var(--ink) 6%); padding: 1px 5px; border-radius: 5px; }
+pre code { background: none; padding: 0; }
+pre { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 13px; }
+/* export mode: one chart per image, for sharing */
+.export main { display: none; }
+#export { display: none; width: 1200px; padding: 44px 48px 30px; background: var(--surface); }
+.export #export { display: block; }
+.export body, body.export { background: var(--surface); }
+#export h1 { font-size: 32px; max-width: 30ch; margin-bottom: 10px; }
+#export .sub { font-size: 19px; max-width: 70ch; margin: 0 0 6px; color: var(--ink-2); }
+#export .how { font-size: 16px; color: var(--ink-2); margin: 14px 0 0; max-width: 90ch; }
+#export .legend { font-size: 16px; margin: 14px 0 6px; }
+#export .legend .key { width: 13px; height: 13px; }
+#export svg text { font-size: 14px; }
+#export footer { margin-top: 22px; padding-top: 12px; border-top: 1px solid var(--grid); font-size: 14px; color: var(--muted); }
+@media print { .controls, details summary, #theme { display: none; } details { display: block; } }
+</style>
+</head>
+<body>
+<main>
+<header class="top">
+  <div>
+    <h1>Mimir 1B: safety and hallucination</h1>
+    <p class="sub" id="lede"></p>
+  </div>
+  <button id="theme" title="Switch light and dark mode">Dark mode</button>
+</header>
+
+<div class="tiles" id="tiles"></div>
+
+<div class="controls" role="group" aria-label="Compare Mimir with">
+  <span class="label"><span class="key" style="background:var(--focus)"></span>Mimir, compared with</span>
+  <span id="chips"></span>
+</div>
+
+<section>
+  <h2>Safety and helpfulness</h2>
+  <p id="txt-tradeoff"></p>
+  <figure>
+    <div class="head"><h3>Refusing harm without refusing everything</h3></div>
+    <figcaption>Each dot is one model. Horizontal: mean share of harmful requests answered safely (8 benchmarks). Vertical: mean share of safe requests answered (3 benchmarks). Top right is best.</figcaption>
+    <div id="c-scatter"></div>
+    <details><summary>Table</summary><div id="t-scatter"></div></details>
+  </figure>
+</section>
+
+<section>
+  <h2>Every safety benchmark</h2>
+  <p id="txt-safety"></p>
+  <figure>
+    <div class="head"><h3>Safety benchmarks, mean of 3 sampled runs</h3></div>
+    <div class="legend" id="l-safety"></div>
+    <div id="c-safety"></div>
+    <details><summary>Table</summary><div id="t-safety"></div></details>
+  </figure>
+</section>
+
+<section>
+  <h2>Where the refusals fail</h2>
+  <p id="txt-sorry"></p>
+  <figure>
+    <div class="head"><h3>SORRY-Bench: share of unsafe requests fulfilled, per category</h3></div>
+    <figcaption>Darker means the model helps more often with the unsafe request. 10 prompts per category, 3 runs.</figcaption>
+    <div id="c-sorry"></div>
+    <details><summary>Table</summary><div id="t-sorry"></div></details>
+  </figure>
+</section>
+
+<section>
+  <h2>Hallucination</h2>
+  <p id="txt-simpleqa"></p>
+  <figure>
+    <div class="head"><h3>SimpleQA Verified: 1,000 hard fact questions</h3></div>
+    <div class="legend" id="l-simpleqa"></div>
+    <div id="c-simpleqa"></div>
+    <details><summary>Table</summary><div id="t-simpleqa"></div></details>
+  </figure>
+  <p id="txt-fact"></p>
+  <figure>
+    <div class="head"><h3>Truthfulness and hallucination benchmarks</h3></div>
+    <div class="legend" id="l-fact"></div>
+    <div id="c-fact"></div>
+    <details><summary>Table</summary><div id="t-fact"></div></details>
+  </figure>
+</section>
+
+<section id="s-agree">
+  <h2>Can we trust the judges?</h2>
+  <p id="txt-agree"></p>
+  <figure>
+    <div class="head"><h3>Agreement between the two judge models</h3></div>
+    <figcaption>Cohen's kappa: 0 is chance agreement, 1 is full agreement. Items pooled over the five models.</figcaption>
+    <div id="c-agree"></div>
+    <details><summary>Table</summary><div id="t-agree"></div></details>
+  </figure>
+</section>
+
+<section>
+  <h2>How we measured</h2>
+  <ul class="notes" id="notes"></ul>
+  <h3 style="margin-top:20px">Evaluate a new Mimir version</h3>
+  <pre><code>bash scripts/evaluate_model.sh --repo danish-foundation-models/DFM-Mimir --revision &lt;commit&gt; --key mimir_v2
+python -m mimireval.report</code></pre>
+</section>
+</main>
+<div id="export"></div>
+<div class="tip" id="tip" role="status"></div>
+
+<script>
+const DATA = {"models": [{"key": "mimir", "label": "Mimir 1B", "repo": "danish-foundation-models/DFM-Mimir", "revision": "396df88"}, {"key": "hrm_text", "label": "HRM-Text 1B", "repo": "sapientinc/HRM-Text-1B", "revision": "22097cb"}, {"key": "qwen35_08b", "label": "Qwen 3.5 0.8B", "repo": "Qwen/Qwen3.5-0.8B", "revision": "2fc0636"}, {"key": "gemma3_1b", "label": "Gemma 3 1B", "repo": "google/gemma-3-1b-it", "revision": "dcc83ea"}, {"key": "olmo2_1b", "label": "OLMo 2 1B", "repo": "allenai/OLMo-2-0425-1B-Instruct", "revision": "48d788e"}], "variants": [{"key": "mimir_room", "of": "mimir", "label": "Mimir 1B*"}], "focus": "mimir", "safety": [{"id": "harmbench", "label": "HarmBench", "better": "high", "group": "harmful", "note": "direct harmful requests", "values": {"mimir": {"mean": 0.8520833333333333, "sd": 0.006505206248331651, "n": 3}, "hrm_text": {"mean": 0.4302083333333333, "sd": 0.013010412496663327, "n": 3}, "qwen35_08b": {"mean": 0.6135416666666667, "sd": 0.007864410870073692, "n": 3}, "gemma3_1b": {"mean": 0.8354166666666667, "sd": 0.01004546954270101, "n": 3}, "olmo2_1b": {"mean": 0.8520833333333333, "sd": 0.0047735163489122925, "n": 3}}}, {"id": "strongreject", "label": "StrongREJECT", "better": "high", "group": "harmful", "note": "harmful requests wrapped in jailbreak tricks", "values": {"mimir": {"mean": 0.9793664632374309, "sd": 0.0020251903319916656, "n": 3}, "hrm_text": {"mean": 0.8144071490845685, "sd": 0.00364227876352843, "n": 3}, "qwen35_08b": {"mean": 0.8713310084277825, "sd": 0.0012536641911317387, "n": 3}, "gemma3_1b": {"mean": 0.8695146759662888, "sd": 0.0031890991359617184, "n": 3}, "olmo2_1b": {"mean": 0.8978131357163616, "sd": 0.00500636056062954, "n": 3}}}, {"id": "wildguardtest", "label": "WildGuardTest", "better": "high", "group": "harmful", "note": "harmful prompts written by people, some disguised", "values": {"mimir": {"mean": 0.9915442812639075, "sd": 0.002039419534915841, "n": 3}, "hrm_text": {"mean": 0.6323987538940811, "sd": 0.0030833125190367567, "n": 3}, "qwen35_08b": {"mean": 0.7890520694259012, "sd": 0.00875492459853404, "n": 3}, "gemma3_1b": {"mean": 0.8651535380507344, "sd": 0.005819624757731213, "n": 3}, "olmo2_1b": {"mean": 0.9937694704049843, "sd": 0.004078839069831633, "n": 3}}}, {"id": "wjb_harmful", "label": "WildJailbreak, harmful", "better": "high", "group": "harmful", "note": "harmful requests hidden in long, elaborate stories", "values": {"mimir": {"mean": 0.8721666666666666, "sd": 0.005057996968497859, "n": 3}, "hrm_text": {"mean": 0.025833333333333337, "sd": 0.007005949852327908, "n": 3}, "qwen35_08b": {"mean": 0.28650000000000003, "sd": 0.00259807621135335, "n": 3}, "gemma3_1b": {"mean": 0.15716666666666668, "sd": 0.0010408329997330585, "n": 3}, "olmo2_1b": {"mean": 0.6633333333333333, "sd": 0.0010408329997330585, "n": 3}}}, {"id": "dan", "label": "Do Anything Now", "better": "high", "group": "harmful", "note": "roleplay jailbreaks that ask the model to drop its rules", "values": {"mimir": {"mean": 0.9, "sd": 0.0033333333333332993, "n": 3}, "hrm_text": {"mean": 0.12888888888888891, "sd": 0.008388704928078635, "n": 3}, "qwen35_08b": {"mean": 0.658888888888889, "sd": 0.01347150628109124, "n": 3}, "gemma3_1b": {"mean": 0.27444444444444444, "sd": 0.003849001794597466, "n": 3}, "olmo2_1b": {"mean": 0.8022222222222223, "sd": 0.01895413567692446, "n": 3}}}, {"id": "trustllm", "label": "TrustLLM jailbreak", "better": "high", "group": "harmful", "note": "jailbreak prompts from the TrustLLM suite", "values": {"mimir": {"mean": 0.9125, "sd": 0.004330127018922229, "n": 3}, "hrm_text": {"mean": 0.08083333333333335, "sd": 0.011547005383792526, "n": 3}, "qwen35_08b": {"mean": 0.6266666666666666, "sd": 0.030242078852706744, "n": 3}, "gemma3_1b": {"mean": 0.7266666666666667, "sd": 0.01376892636821524, "n": 3}, "olmo2_1b": {"mean": 0.6924999999999999, "sd": 0.012990381056766559, "n": 3}}}, {"id": "sorrybench", "label": "SORRY-Bench", "better": "high", "group": "harmful", "note": "unsafe requests on 44 topics", "values": {"mimir": {"mean": 0.8886363636363637, "sd": 0.006818181818181834, "n": 3}, "hrm_text": {"mean": 0.31287878787878787, "sd": 0.005719571541871828, "n": 3}, "qwen35_08b": {"mean": 0.5007575757575757, "sd": 0.013699349484867547, "n": 3}, "gemma3_1b": {"mean": 0.6931818181818182, "sd": 0.009090909090909094, "n": 3}, "olmo2_1b": {"mean": 0.7113636363636363, "sd": 0.010414944761263298, "n": 3}}}, {"id": "xstest_unsafe", "label": "XSTest, unsafe prompts", "better": "high", "group": "harmful", "note": "clearly unsafe questions", "values": {"mimir": {"mean": 0.9066666666666667, "sd": 0.014433756729740658, "n": 3}, "hrm_text": {"mean": 0.6999999999999998, "sd": 0.0050000000000000044, "n": 3}, "qwen35_08b": {"mean": 0.6966666666666667, "sd": 0.00763762615825974, "n": 3}, "gemma3_1b": {"mean": 0.8450000000000001, "sd": 0.0, "n": 3}, "olmo2_1b": {"mean": 0.8649999999999999, "sd": 0.013228756555322964, "n": 3}}}, {"id": "xstest_safe", "label": "XSTest, safe prompts", "better": "high", "group": "benign", "note": "safe questions that sound unsafe ('how do I kill a process?')", "values": {"mimir": {"mean": 0.8506666666666667, "sd": 0.01847520861406804, "n": 3}, "hrm_text": {"mean": 0.8946666666666667, "sd": 0.0061101009266077925, "n": 3}, "qwen35_08b": {"mean": 0.9373333333333332, "sd": 0.012858201014657244, "n": 3}, "gemma3_1b": {"mean": 0.8866666666666667, "sd": 0.00461880215351701, "n": 3}, "olmo2_1b": {"mean": 0.916, "sd": 0.010583005244258372, "n": 3}}}, {"id": "wjb_benign", "label": "WildJailbreak, benign", "better": "high", "group": "benign", "note": "harmless requests written like jailbreaks", "values": {"mimir": {"mean": 0.8039999999999999, "sd": 0.013856406460550967, "n": 3}, "hrm_text": {"mean": 0.96, "sd": 0.008000000000000007, "n": 3}, "qwen35_08b": {"mean": 0.8346666666666667, "sd": 0.022030282189144428, "n": 3}, "gemma3_1b": {"mean": 0.992, "sd": 0.0, "n": 3}, "olmo2_1b": {"mean": 0.944, "sd": 0.014422205101855908, "n": 3}}}, {"id": "orbench", "label": "OR-Bench-Hard-1K", "better": "high", "group": "benign", "note": "harmless prompts that look toxic", "values": {"mimir": {"mean": 0.3136214303765479, "sd": 0.014727118811557702, "n": 3}, "hrm_text": {"mean": 0.7313621430376548, "sd": 0.006358223717669465, "n": 3}, "qwen35_08b": {"mean": 0.6509982309830681, "sd": 0.014088814621952364, "n": 3}, "gemma3_1b": {"mean": 0.625979277230225, "sd": 0.006795213373640991, "n": 3}, "olmo2_1b": {"mean": 0.5670962850644429, "sd": 0.011219597109134758, "n": 3}}}, {"id": "toxigen", "label": "ToxiGen", "better": "high", "group": "bias", "note": "continuations of hateful text that stay free of toxicity", "values": {"mimir": {"mean": 0.9064047619047618, "sd": 0.0005067570631854847, "n": 3}, "hrm_text": {"mean": 0.8886428571428571, "sd": 0.0017008401285415241, "n": 3}, "qwen35_08b": {"mean": 0.9427619047619048, "sd": 0.000975028344259187, "n": 3}, "gemma3_1b": {"mean": 0.9967619047619047, "sd": 0.00029738085706658684, "n": 3}, "olmo2_1b": {"mean": 0.9998809523809524, "sd": 4.123930494207496e-05, "n": 3}}}, {"id": "bbq_acc", "label": "BBQ accuracy", "better": "high", "group": "bias", "note": "questions that tempt a stereotyped answer", "values": {"mimir": {"mean": 0.8212107690019336, "sd": 0.007380791919627046, "n": 3}, "hrm_text": {"mean": 0.5028261192919827, "sd": 0.0023647349539765677, "n": 3}, "qwen35_08b": {"mean": 0.5167336010709506, "sd": 0.008345204912657288, "n": 3}, "gemma3_1b": {"mean": 0.37371709058456043, "sd": 0.004274262396400722, "n": 3}, "olmo2_1b": {"mean": 0.31957459467499627, "sd": 0.0012288198454453554, "n": 3}}}, {"id": "bbq_bias", "label": "BBQ bias size, ambiguous", "better": "low", "group": "bias", "note": "lean towards the stereotype; lower is better", "values": {"mimir": {"mean": 0.06202164159529411, "sd": 0.007087435285316245, "n": 3}, "hrm_text": {"mean": 0.04509427594797608, "sd": 0.01496709485053895, "n": 3}, "qwen35_08b": {"mean": 0.06227303299649173, "sd": 0.005299660735936546, "n": 3}, "gemma3_1b": {"mean": 0.04153562940558883, "sd": 0.007843780276220024, "n": 3}, "olmo2_1b": {"mean": 0.017073110977324227, "sd": 0.005281024226527389, "n": 3}}}, {"id": "wmdp", "label": "WMDP accuracy", "better": "none", "group": "hazard", "note": "dangerous bio, chemistry, cyber knowledge; chance is 25%", "values": {"mimir": {"mean": 0.4336966394187103, "sd": 0.011425745345512333, "n": 3}, "hrm_text": {"mean": 0.3578564940962761, "sd": 0.006143392033818666, "n": 3}, "qwen35_08b": {"mean": 0.4091734786557675, "sd": 0.015007004216038424, "n": 3}, "gemma3_1b": {"mean": 0.38283378746594005, "sd": 0.009536784741144397, "n": 3}, "olmo2_1b": {"mean": 0.34377838328792004, "sd": 0.028718277481857235, "n": 3}}}], "fact": [{"id": "tqa_mc1", "label": "TruthfulQA MC1, English", "better": "high", "group": "truthfulqa", "note": "picks the one true answer among false ones", "values": {"mimir": {"mean": 0.34394124847001223, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.2839657282741738, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.3072215422276622, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.2729498164014688, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.31211750305997554, "sd": 0.0, "n": 1}, "mimir_room": null}, "second": {}}, {"id": "tqa_mc1_da", "label": "TruthfulQA MC1, Danish", "better": "high", "group": "truthfulqa", "note": "the same, Danish translation", "values": {"mimir": {"mean": 0.3559539052496799, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.23687580025608196, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.2893725992317542, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.2573623559539053, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.23815620998719592, "sd": 0.0, "n": 1}, "mimir_room": null}, "second": {}}, {"id": "tqa_mc2", "label": "TruthfulQA MC2, English", "better": "high", "group": "truthfulqa", "note": "probability the model puts on true answers", "values": {"mimir": {"mean": 0.5321321427543577, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.4474542249334163, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.46547360007125493, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.4389898284598102, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.4871507684481147, "sd": 0.0, "n": 1}, "mimir_room": null}, "second": {}}, {"id": "tqa_mc2_da", "label": "TruthfulQA MC2, Danish", "better": "high", "group": "truthfulqa", "note": "the same, Danish translation", "values": {"mimir": {"mean": 0.5221924381856258, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.40636985299474637, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.453200328679339, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.4293547907305036, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.3886934182928435, "sd": 0.0, "n": 1}, "mimir_room": null}, "second": {}}, {"id": "tqa_mc1_gen", "label": "TruthfulQA MC1, letter", "better": "high", "group": "truthfulqa", "note": "writes the letter of the true answer", "values": {"mimir": {"mean": 0.5067319461444308, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.24724602203182375, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.3243574051407589, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.23623011015911874, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.21297429620563035, "sd": 0.0, "n": 1}, "mimir_room": null}, "second": {"mimir": null, "hrm_text": null, "qwen35_08b": null, "gemma3_1b": null, "olmo2_1b": null}}, {"id": "tqa_truthful", "label": "TruthfulQA, truthful", "better": "high", "group": "truthfulqa", "note": "free answers judged true", "values": {"mimir": {"mean": 0.34394124847001223, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.2350061199510404, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.08078335373317014, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.15177478580171358, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.3072215422276622, "sd": 0.0, "n": 1}, "mimir_room": {"mean": 0.397796817625459, "sd": 0.0, "n": 1}}, "second": {"mimir": 0.401468788249694, "hrm_text": 0.2839657282741738, "qwen35_08b": 0.11627906976744186, "gemma3_1b": 0.16401468788249693, "olmo2_1b": 0.37209302325581395}}, {"id": "tqa_ti", "label": "TruthfulQA, truthful and informative", "better": "high", "group": "truthfulqa", "note": "free answers judged true and useful", "values": {"mimir": {"mean": 0.2558139534883721, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.14443084455324356, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.05752753977968176, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.13219094247246022, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.25703794369645044, "sd": 0.0, "n": 1}, "mimir_room": {"mean": 0.2594859241126071, "sd": 0.0, "n": 1}}, "second": {"mimir": 0.3268053855569155, "hrm_text": 0.2178702570379437, "qwen35_08b": 0.10281517747858017, "gemma3_1b": 0.15789473684210525, "olmo2_1b": 0.3537331701346389}}, {"id": "precise_halu", "label": "PreciseWikiQA hallucination", "better": "low", "group": "hallulens", "note": "wrong among answered questions; lower is better", "values": {"mimir": {"mean": 0.9723633407843935, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.9697959183673469, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.9718139722166298, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.9696479158235533, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.9450713221205025, "sd": 0.0, "n": 1}, "mimir_room": {"mean": 0.970086417017505, "sd": 0.0, "n": 1}}, "second": {"mimir": 0.9669911129919594, "hrm_text": 0.9645346453464535, "qwen35_08b": 0.9687877567458719, "gemma3_1b": 0.9664035620319773, "olmo2_1b": 0.9386304909560723}}, {"id": "precise_refusal", "label": "PreciseWikiQA refusal", "better": "none", "group": "hallulens", "note": "questions the model declines", "values": {"mimir": {"mean": 0.0158, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.02, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.0066, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.0116, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.0606, "sd": 0.0, "n": 1}, "mimir_room": {"mean": 0.0974, "sd": 0.0, "n": 1}}, "second": {"mimir": 0.0548, "hrm_text": 0.0244, "qwen35_08b": 0.0068, "gemma3_1b": 0.0118, "olmo2_1b": 0.0712}}, {"id": "mixed_false_acc", "label": "Invented names taken as real", "better": "low", "group": "hallulens", "note": "invented animals, plants, drugs; lower is better", "values": {"mimir": {"mean": 0.961875, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.974625, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.936125, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.976, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.92675, "sd": 0.0, "n": 1}, "mimir_room": {"mean": 0.919625, "sd": 0.0, "n": 1}}, "second": {"mimir": 0.984375, "hrm_text": 0.986875, "qwen35_08b": 0.953625, "gemma3_1b": 0.9915, "olmo2_1b": 0.935}}, {"id": "longwiki_prec", "label": "LongWiki precision", "better": "high", "group": "hallulens", "note": "claims in long answers backed by Wikipedia", "values": {"mimir": {"mean": 0.2704671656067647, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.2900070695880791, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.1849812891747851, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.2128910808542266, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.3551715501411085, "sd": 0.0, "n": 1}, "mimir_room": null}, "second": {"mimir": 0.2917470234725553, "hrm_text": 0.3158023411456307, "qwen35_08b": 0.1922624644140891, "gemma3_1b": 0.2046716372407477, "olmo2_1b": 0.3818283051482741}}, {"id": "longwiki_f1", "label": "LongWiki F1@32", "better": "high", "group": "hallulens", "note": "precision and coverage of the claims", "values": {"mimir": {"mean": 0.2041948152070233, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.2062812941600044, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.1993201358901151, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.2079398370120825, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.3888413287691202, "sd": 0.0, "n": 1}, "mimir_room": null}, "second": {"mimir": 0.231030542117818, "hrm_text": 0.2391790910754887, "qwen35_08b": 0.2263476443581606, "gemma3_1b": 0.2376794200426672, "olmo2_1b": 0.4430847042266044}}, {"id": "hhem_halu", "label": "Summary hallucination (HHEM)", "better": "low", "group": "grounded", "note": "news summaries with unsupported content; lower is better", "values": {"mimir": {"mean": 0.12647374062165062, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.13221406086044074, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.02210526315789474, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.04862579281183932, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.1731374606505771, "sd": 0.0, "n": 1}, "mimir_room": null}, "second": {"mimir": null, "hrm_text": null, "qwen35_08b": null, "gemma3_1b": null, "olmo2_1b": null}}, {"id": "hhem_answer", "label": "Summary answer rate", "better": "high", "group": "grounded", "note": "articles the model agreed to summarize", "values": {"mimir": {"mean": 0.9790136411332634, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 1.0, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.9968520461699895, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.9926547743966422, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 1.0, "sd": 0.0, "n": 1}, "mimir_room": null}, "second": {"mimir": null, "hrm_text": null, "qwen35_08b": null, "gemma3_1b": null, "olmo2_1b": null}}, {"id": "crows", "label": "CrowS-Pairs stereotype", "better": "mid50", "group": "bias", "note": "prefers the stereotyped sentence; 50% is no preference", "values": {"mimir": {"mean": 0.4949314251639833, "sd": 0.0, "n": 1}, "hrm_text": {"mean": 0.5181872391174717, "sd": 0.0, "n": 1}, "qwen35_08b": {"mean": 0.5348837209302325, "sd": 0.0, "n": 1}, "gemma3_1b": {"mean": 0.531902206320811, "sd": 0.0, "n": 1}, "olmo2_1b": {"mean": 0.6267143709004174, "sd": 0.0, "n": 1}, "mimir_room": null}, "second": {}}], "sorry": {"categories": ["personal insulting words", "social-group insulting words", "threatening words", "lewd and obscene words", "libelous words", "self-harm", "violent crimes", "harassment", "sexual crimes", "property crimes", "public order crimes", "general advice for system intrusion, hacking & cyber attacks, data privacy and confidentiality violations", "malware code generation", "fraud, scams, and deception", "financial crimes", "intellectual property infringement", "personal identifiable information violations", "illegal crafting, manufacturing, and distribution", "terrorism", "child-related crimes", "animal-related crimes", "environmental crimes", "evasion of law enforcement", "human elimination & world domination", "advice on adult content", "sexual explicit content generation", "non-sexual explicit content generation", "fake news generation", "false advertising", "advice on discrimination behaviors", "military use", "political belief promotion", "ethical belief promotion", "religion promotion", "social stereotype promotion", "extremist content promotion", "conspiracy theories promotion", "false common knowledge promotion", "harmful & unhealthy behaviors promotion", "medical advice", "financial advice", "legal consulting advice", "governance decision advice", "dangerous machinery operation advice"], "values": {"mimir": [0.0, 0.0, 0.2666666666666666, 0.033333333333333326, 0.09999999999999998, 0.09999999999999998, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.19999999999999984, 0.09999999999999998, 0.06666666666666676, 0.09999999999999998, 0.06666666666666676, 0.09999999999999998, 0.0, 0.1333333333333333, 0.4, 0.30000000000000016, 0.0, 0.16666666666666663, 0.06666666666666676, 0.33333333333333337, 0.2666666666666666, 0.4, 0.5333333333333334, 0.033333333333333326, 0.033333333333333326, 0.0, 0.0, 0.09999999999999998, 0.16666666666666663, 0.16666666666666663, 0.5, 0.0, 0.16666666666666663], "hrm_text": [0.5, 0.5, 0.7666666666666667, 0.5999999999999999, 0.5333333333333334, 0.43333333333333335, 0.4666666666666667, 0.5333333333333334, 0.09999999999999998, 0.2666666666666666, 0.8666666666666667, 0.8666666666666667, 0.9, 0.5666666666666667, 0.5666666666666667, 0.9, 0.5999999999999999, 0.9, 0.8666666666666667, 0.2666666666666666, 0.6333333333333333, 0.7333333333333334, 0.43333333333333335, 0.6666666666666667, 0.6666666666666667, 0.9, 0.9333333333333333, 0.8666666666666667, 1.0, 0.7666666666666667, 0.8666666666666667, 0.7, 0.9333333333333333, 1.0, 0.8666666666666667, 0.9, 0.8666666666666667, 0.8666666666666667, 0.7333333333333334, 0.6666666666666667, 0.5999999999999999, 0.5333333333333334, 0.5, 0.5999999999999999], "qwen35_08b": [0.20000000000000007, 0.2666666666666666, 0.5, 0.43333333333333335, 0.16666666666666663, 0.2333333333333334, 0.2333333333333334, 0.2333333333333334, 0.20000000000000007, 0.4, 0.4, 0.4, 0.20000000000000007, 0.5333333333333334, 0.2333333333333334, 0.7666666666666667, 0.2666666666666666, 0.6666666666666667, 0.19999999999999984, 0.29999999999999993, 0.4, 0.5666666666666667, 0.5, 0.20000000000000007, 0.43333333333333324, 0.43333333333333335, 0.7333333333333334, 0.5333333333333334, 0.9333333333333333, 0.6666666666666667, 0.7333333333333334, 0.7, 0.8666666666666667, 1.0, 0.7, 0.4, 0.5999999999999999, 0.7333333333333334, 0.7, 0.5999999999999999, 0.7, 0.8333333333333334, 0.3666666666666667, 0.8], "gemma3_1b": [0.0, 0.0, 0.19999999999999984, 0.33333333333333337, 0.0, 0.0, 0.09999999999999998, 0.0, 0.033333333333333326, 0.09999999999999998, 0.0, 0.0, 0.0, 0.2333333333333334, 0.2333333333333334, 0.8666666666666667, 0.1333333333333333, 0.30000000000000016, 0.1333333333333333, 0.09999999999999998, 0.30000000000000016, 0.2666666666666666, 0.2333333333333334, 0.033333333333333326, 0.43333333333333335, 0.2333333333333334, 0.09999999999999998, 0.5666666666666667, 0.9, 0.5999999999999999, 0.6333333333333333, 0.33333333333333337, 0.6666666666666667, 0.7666666666666667, 0.30000000000000016, 0.1333333333333333, 0.30000000000000016, 0.6333333333333333, 0.0, 0.29999999999999993, 0.9666666666666667, 0.8, 0.4, 0.8333333333333334], "olmo2_1b": [0.0, 0.09999999999999998, 0.43333333333333335, 0.43333333333333335, 0.0, 0.09999999999999998, 0.0, 0.0, 0.0, 0.09999999999999998, 0.0, 0.0, 0.06666666666666676, 0.2333333333333334, 0.0, 0.2666666666666666, 0.1333333333333333, 0.3666666666666667, 0.09999999999999998, 0.09999999999999998, 0.09999999999999998, 0.33333333333333337, 0.3666666666666667, 0.06666666666666676, 0.6333333333333333, 0.4666666666666667, 0.43333333333333335, 0.16666666666666663, 0.7333333333333334, 0.20000000000000007, 0.4666666666666667, 0.5666666666666667, 0.7, 0.7666666666666667, 0.3666666666666667, 0.20000000000000007, 0.06666666666666676, 0.3666666666666667, 0.2333333333333334, 0.6666666666666667, 0.7333333333333334, 0.9333333333333333, 0.09999999999999998, 0.5999999999999999]}}, "simpleqa": {"mimir": {"correct": 0.025, "incorrect": 0.919, "not_attempted": 0.05600000000000005, "acc_given_attempted": 0.02648305084745763, "f1": 0.0257201646090535}, "hrm_text": {"correct": 0.02, "incorrect": 0.928, "not_attempted": 0.052000000000000046, "acc_given_attempted": 0.021097046413502112, "f1": 0.020533880903490762}, "qwen35_08b": {"correct": 0.023, "incorrect": 0.963, "not_attempted": 0.014000000000000012, "acc_given_attempted": 0.02332657200811359, "f1": 0.023162134944612285}, "gemma3_1b": {"correct": 0.023, "incorrect": 0.962, "not_attempted": 0.015000000000000013, "acc_given_attempted": 0.023350253807106598, "f1": 0.023173803526448364}, "olmo2_1b": {"correct": 0.023, "incorrect": 0.852, "not_attempted": 0.125, "acc_given_attempted": 0.026285714285714284, "f1": 0.024533333333333334}, "mimir_room": {"correct": 0.025, "incorrect": 0.896, "not_attempted": 0.07899999999999996, "acc_given_attempted": 0.02714440825190011, "f1": 0.026028110359187923}}, "agreement": [{"label": "PreciseWikiQA refusal", "n": 25000, "kappa": 0.7433415995705551, "agree": 0.98584}, {"label": "PreciseWikiQA hallucination", "n": 25000, "kappa": 0.9152224469444528, "agree": 0.9942}, {"label": "Invented names taken as real", "n": 40000, "kappa": 0.7142438999492552, "agree": 0.979425}, {"label": "SimpleQA grade", "n": 5000, "kappa": 0.887171572960365, "agree": 0.9836}, {"label": "TruthfulQA truthful", "n": 4085, "kappa": 0.8056515903080851, "agree": 0.9277845777233782}, {"label": "TruthfulQA informative", "n": 4085, "kappa": 0.54485642558953, "agree": 0.9226438188494492}], "judges": {"primary": "deepseek-ai/DeepSeek-V4.1-Flash", "second": "zai-org/GLM-5.3-Flash"}};
+const TEXT = {
+ "lede": "We tested Mimir 1B, a Danish language model, on 15 safety measures and 15 hallucination measures, next to four open models of about the same size. Mimir refuses harmful requests more often than every other model in the group. It also refuses more safe requests than the others.",
+ "txt-tradeoff": "A safe assistant has two jobs. It refuses a harmful request, e.g., instructions for a weapon. It also answers a safe request, even when the request sounds dangerous. Mimir answers 91% of the harmful requests in a safe way (mean of eight benchmarks), and this is the best result of the five models. HRM-Text 1B has the same architecture as Mimir, but different training data, and it answers only 39% of the harmful requests in a safe way. On the safe requests the order flips: Mimir answers 66% of them, while the other four models answer between 81% and 86%.",
+ "txt-safety": "Mimir leads in particular on jailbreaks, i.e., prompts written to trick a model into breaking its rules. On WildJailbreak, where the harmful request hides inside a long story, Mimir refuses 87% of the requests, against 66% for the next best model (OLMo 2) and 3% for HRM-Text. The weak point is OR-Bench-Hard: these prompts are harmless but contain words that look toxic, and Mimir answers only 31% of them. On the bias question set BBQ, Mimir answers 82% of the questions correctly, against 52% or less for the other models, with a similar lean towards stereotypes. Mimir's model card says that the model is not specifically aligned for safety. Its training data contains refusal examples from public instruction datasets (e.g., Tulu 3), and these examples are the most likely source of this behavior.",
+ "txt-sorry": "SORRY-Bench asks 10 unsafe requests on each of 44 topics. Mimir helps with 11% of them on average, the lowest share of the group. The remaining failures concentrate on a few topics: Mimir writes promotion of a religion in 53% of the cases, legal advice in 50%, and explicit sexual content in 40%. Questions on violence, crime and malware are almost always refused.",
+ "notes": [
+  "Models: Mimir 1B (danish-foundation-models/DFM-Mimir, commit 396df88), HRM-Text 1B, Qwen 3.5 0.8B, Gemma 3 1B and OLMo 2 1B, every model with its own chat format.",
+  "Mimir reads the prompt in both directions before it writes the answer (a prefix language model). We kept this behavior exact in every step, and we checked it against the reference implementation of the authors.",
+  "Safety: Ai2 safety-eval suite, plus SORRY-Bench and OR-Bench-Hard-1K. Answers are sampled (temperature 0.7) three times; numbers are the mean of the three runs. Open classifiers judge the answers (WildGuard, the SORRY-Bench judge, the StrongREJECT judge).",
+  "Hallucination: SimpleQA Verified, TruthfulQA, HalluLens (PreciseWikiQA, LongWiki, invented entities) and the Vectara summary set with HHEM-2.1-Open. Answers are greedy. DeepSeek-V4.1-Flash judges the free answers; GLM-5.3-Flash judges them a second time to measure agreement.",
+  "Differences from the original setups: the original judge models of TruthfulQA and HalluLens are retired or local only, so an API model replaces them. HalluLens runs once instead of three times, and its web-search task is left out. The Wikipedia database for LongWiki comes from a public copy on Hugging Face.",
+  "All code, the exact data revisions and the raw answers are in the mimireval repository."
+ ],
+ "footer": "Models: Mimir 1B, HRM-Text 1B, Qwen 3.5 0.8B, Gemma 3 1B, OLMo 2 1B. Evaluation by mimireval, October 2026.",
+ "export": {
+  "scatter": {
+   "title": "Mimir refuses harmful requests most often, but it also refuses more safe ones",
+   "sub": "Five small open language models (about 1 billion parameters each) on 11 safety benchmarks.",
+   "how": "Each dot is a model. Further right: more harmful requests answered safely (mean of 8 benchmarks). Higher up: more safe requests answered (mean of 3 benchmarks). The ideal model sits in the top right corner."
+  },
+  "safety": {
+   "title": "Safety benchmarks: Mimir is the most careful of the five models",
+   "sub": "Share of answers judged safe on harmful requests, and share of answers given on safe requests. Mean of three runs.",
+   "how": "A frame and a star mark the best model in each row; tied models share it. Mimir is the blue column. A low number in the safe requests group means that the model refuses questions it should answer."
+  },
+  "sorry": {
+   "title": "Where the refusals fail: unsafe requests that the models still fulfill",
+   "sub": "SORRY-Bench: 10 unsafe requests on each of 44 topics, three runs. Darker cells mean that the model helps more often.",
+   "how": "A light column is a model that refuses almost everything on that topic. Mimir's column is the lightest, with gaps on religion, legal advice and explicit content."
+  },
+  "simpleqa": {
+   "title": "Small models know few hard facts, and they rarely say that they do not know",
+   "sub": "SimpleQA Verified: 1,000 short questions with one checkable answer. Share of correct, wrong and not attempted answers.",
+   "how": "Green: correct. Red: wrong. Gray: the model declined to answer. A model that does not know should decline instead of guessing. Mimir 1B* is Mimir with room to finish its reasoning; it is not ranked."
+  },
+  "fact": {
+   "title": "Truthfulness and hallucination: Mimir leads on common misconceptions",
+   "sub": "Benchmarks on misconceptions (TruthfulQA), Wikipedia facts (HalluLens), news summaries (HHEM) and stereotypes (CrowS-Pairs).",
+   "how": "A frame and a star mark the best model in each row; tied models share it. Mimir 1B* is Mimir with room to finish its reasoning; it is not ranked."
+  },
+  "agree": {
+   "title": "Two independent judge models agree on most verdicts",
+   "sub": "DeepSeek-V4.1-Flash judged every free answer. GLM-5.3-Flash judged the same answers again, without seeing the first verdict.",
+   "how": "Cohen's kappa corrects the agreement for chance: 0 means chance agreement, 1 means full agreement. Rare labels (e.g., refusals) give a lower kappa for the same share of equal verdicts."
+  }
+ },
+ "txt-simpleqa": "SimpleQA Verified asks 1,000 short questions with one checkable answer, e.g., the year of a minor award. Models of this size know very few of these facts: every model answers between 2.0% and 2.5% of the questions correctly. The more telling part is what a model does when it does not know. A careful model says so, and the answer counts as not attempted. A careless model gives a wrong answer instead. OLMo 2 declines 12.5% of the questions and Mimir declines 5.6%. Qwen 3.5 and Gemma 3 almost never decline (1.5%).",
+ "txt-fact": "TruthfulQA tests common misconceptions, e.g., what happens if you crack your knuckles a lot. Mimir is the best model of the group in every TruthfulQA format. It picks the true answer among false ones more often, in English (34%) and in Danish (36%). Its free answers are judged true in 34% of the cases, against 31% for OLMo 2 and 8% to 24% for the other models. HalluLens asks questions about less known Wikipedia pages. When the small models answer these questions, the answer is wrong in 95% to 97% of the cases. Only OLMo 2 declines more than 2% of them. In LongWiki, each model writes a long answer about a Wikipedia topic. The judging model splits the answer into single facts and checks each fact against passages from Wikipedia. OLMo 2 is the best model here: 36% of its facts are supported, against 27% for Mimir and 19% to 29% for the other models. The second judging model gives the same order. HalluLens also contains questions about fictional animals, plants and medicines. Every model accepts more than 92% of these fictional names as real. OLMo 2 does so least often (93%), and Mimir does so in 96% of the cases. In the summaries of news articles, Mimir adds content that is not in the article in 12.6% of the cases. Qwen 3.5 does this least often (2.2%). On CrowS-Pairs, Mimir shows no preference for the stereotyped sentence (49.5%, where 50% means no preference). Mimir sometimes starts a reasoning block between <think> tags, also when nobody asked for it. Under the short length limits of these benchmarks, the reasoning often stops before the answer (about one answer in five on HalluLens). We therefore scored a second version, Mimir 1B*, which had room to finish its reasoning. The results hardly change: the share of true TruthfulQA answers goes from 34% to 40%, and the PreciseWikiQA errors stay at 97%."
+};
+const NS = "http://www.w3.org/2000/svg";
+const M = Object.fromEntries([...DATA.models, ...DATA.variants].map(m => [m.key, m]));
+const VARIANT = new Set(DATA.variants.map(v => v.key));
+const FOCUS = DATA.focus;
+const PEERS = DATA.models.map(m => m.key).filter(k => k !== FOCUS);
+let compare = new URLSearchParams(location.search).get("compare") ?? "hrm_text";
+const pct = (v, d = 0) => v == null ? "n/a" : `${(100 * v).toFixed(d)}%`;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function txt(parent, x, y, s, attrs = {}) {
+  const { "font-size": size, "font-weight": weight, style = "", ...rest } = attrs;  // inline style beats the stylesheet
+  const t = el("text", { x, y, ...rest, style: `${size ? `font-size:${size}px;` : ""}${weight ? `font-weight:${weight};` : ""}${style}` }, parent);
+  t.textContent = s;
+  return t;
+}
+function svg(host, w, h) {
+  const s = el("svg", { viewBox: `0 0 ${w} ${h}`, role: "img" });
+  host.replaceChildren(s);
+  return s;
+}
+function role(k) { return k === FOCUS ? "focus" : VARIANT.has(k) ? "variant" : k === compare ? "compare" : "peer"; }
+const COLOR = { focus: "var(--focus)", variant: "var(--focus)", compare: "var(--compare)", peer: "var(--peer)" };
+const RADIUS = { focus: 6, variant: 5, compare: 5.5, peer: 4.5 };
+const RANK = { peer: 0, compare: 1, variant: 2, focus: 3 };
+const order = keys => [...keys].sort((a, b) => RANK[role(a)] - RANK[role(b)]);
+
+// tooltip: values lead, labels follow
+const tip = document.getElementById("tip");
+function hover(node, rows) {
+  node.setAttribute("tabindex", 0);
+  const show = ev => {
+    tip.replaceChildren();
+    for (const [strong, weak] of rows()) {
+      const b = document.createElement("b"); b.textContent = strong;
+      const s = document.createElement("span"); s.textContent = weak;
+      tip.append(b, s);
+    }
+    tip.style.display = "block";
+    const r = ev.clientX != null ? { x: ev.clientX, y: ev.clientY } : (() => { const b = node.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y }; })();
+    const w = tip.offsetWidth;
+    tip.style.left = `${Math.min(r.x + 14, innerWidth - w - 8)}px`;
+    tip.style.top = `${r.y + 14}px`;
+  };
+  node.addEventListener("pointermove", show);
+  node.addEventListener("focus", show);
+  node.addEventListener("pointerleave", () => tip.style.display = "none");
+  node.addEventListener("blur", () => tip.style.display = "none");
+}
+function dot(g, x, y, k, extra = {}) {
+  const r = RADIUS[role(k)];
+  if (role(k) === "variant")  // hollow: the same model under a different setting
+    return el("circle", { cx: x, cy: y, r, fill: "var(--surface)", stroke: "var(--focus)", "stroke-width": 2, ...extra }, g);
+  return el("circle", { cx: x, cy: y, r, fill: COLOR[role(k)], stroke: "var(--surface)", "stroke-width": 2, ...extra }, g);
+}
+function table(host, head, rows) {
+  const t = document.createElement("table");
+  const tr = t.insertRow();
+  head.forEach(h => { const th = document.createElement("th"); th.textContent = h; tr.appendChild(th); });
+  rows.forEach(r => { const row = t.insertRow(); r.forEach(c => { row.insertCell().textContent = c; }); });
+  document.getElementById(host).replaceChildren(t);
+}
+function legend(host, items) {
+  const h = document.getElementById(host); h.replaceChildren();
+  items.forEach(([color, label, shape]) => {
+    const s = document.createElement("span");
+    const k = document.createElement("span"); k.className = "key"; k.style.background = color;
+    if (shape === "rect") k.style.borderRadius = "2px";
+    s.append(k, document.createTextNode(label)); h.appendChild(s);
+  });
+}
+const modelLegend = (host, rows = []) => {
+  legend(host, [["var(--focus)", M[FOCUS].label], ...(compare ? [["var(--compare)", M[compare].label]] : []),
+    ["var(--peer)", "other models (hover for names)"]]);
+  const vs = DATA.variants.filter(v => rows.some(r => r.values[v.key]));
+  for (const v of vs) {
+    const sp = document.createElement("span"), k = document.createElement("span");
+    k.className = "key"; k.style.background = "var(--surface)"; k.style.border = "2px solid var(--focus)"; k.style.width = k.style.height = "11px";
+    sp.append(k, document.createTextNode(`${v.label} (room to finish its reasoning)`)); document.getElementById(host).appendChild(sp);
+  }
+};
+
+// summary numbers
+const groupMean = (rows, group, k) => {
+  const v = rows.filter(r => r.group === group).map(r => r.values[k]?.mean).filter(v => v != null);
+  return v.length ? v.reduce((a, b) => a + b) / v.length : null;
+};
+const harm = k => groupMean(DATA.safety, "harmful", k);
+const benign = k => groupMean(DATA.safety, "benign", k);
+const rank = (f, k) => 1 + DATA.models.filter(m => f(m.key) > f(k)).length;
+const factRow = id => DATA.fact.find(r => r.id === id);
+const safetyRow = id => DATA.safety.find(r => r.id === id);
+
+function tiles() {
+  const h = document.getElementById("tiles"); h.replaceChildren();
+  const add = (v, l, d) => {
+    const t = document.createElement("div"); t.className = "tile";
+    for (const [cls, s] of [["l", l], ["v", v], ["d", d]]) { const e = document.createElement("div"); e.className = cls; e.textContent = s; t.appendChild(e); }
+    h.appendChild(t);
+  };
+  const n = DATA.models.length;
+  add(pct(harm(FOCUS)), "Harmful requests answered safely", `rank ${rank(harm, FOCUS)} of ${n} models, mean of 8 benchmarks`);
+  add(pct(benign(FOCUS)), "Safe requests answered", `rank ${rank(benign, FOCUS)} of ${n}, mean of 3 benchmarks`);
+  const sq = DATA.simpleqa[FOCUS];
+  if (sq) add(pct(sq.correct, 1), "SimpleQA Verified correct", `${pct(sq.not_attempted, 1)} not attempted`);
+  const hh = factRow("hhem_halu")?.values[FOCUS];
+  if (hh) add(pct(hh.mean, 1), "Summaries with hallucination", "HHEM-2.1-Open on 953 news articles");
+}
+
+function chips() {
+  const h = document.getElementById("chips"); h.replaceChildren();
+  [...PEERS, null].forEach(k => {
+    const b = document.createElement("button");
+    b.textContent = k ? M[k].label : "none";
+    b.setAttribute("aria-pressed", String(compare === k));
+    if (k) { const s = document.createElement("span"); s.className = "key"; s.style.background = compare === k ? "var(--compare)" : "var(--peer)"; b.prepend(s); }
+    b.onclick = () => { compare = k; render(); };
+    h.append(b, " ");
+  });
+}
+
+function scatter() {
+  const W = 900, H = 420, L = 60, R = 30, T = 20, B = 50;
+  const pts = DATA.models.map(m => ({ k: m.key, x: harm(m.key), y: benign(m.key) })).filter(p => p.x != null && p.y != null);
+  const lo = v => Math.max(0, Math.floor((Math.min(...v) - 0.05) * 10) / 10);
+  const x0 = lo(pts.map(p => p.x)), y0 = lo(pts.map(p => p.y));
+  const sx = v => L + (v - x0) / (1 - x0) * (W - L - R), sy = v => H - B - (v - y0) / (1 - y0) * (H - T - B);
+  const s = svg(document.getElementById("c-scatter"), W, H);
+  for (let v = x0; v <= 1.0001; v += 0.1) {
+    el("line", { x1: sx(v), x2: sx(v), y1: T, y2: H - B, stroke: "var(--grid)" }, s);
+    txt(s, sx(v), H - B + 18, pct(v), { "text-anchor": "middle" });
+  }
+  for (let v = y0; v <= 1.0001; v += 0.1) {
+    el("line", { x1: L, x2: W - R, y1: sy(v), y2: sy(v), stroke: "var(--grid)" }, s);
+    txt(s, L - 8, sy(v) + 4, pct(v), { "text-anchor": "end" });
+  }
+  txt(s, W - R, H - 8, "harmful requests answered safely →", { "text-anchor": "end", class: "muted" });
+  txt(s, L, T - 6, "↑ safe requests answered", { class: "muted" });
+  const g = el("g", {}, s);
+  const top = f => { const r = v => Math.round(100 * v), b = Math.max(...pts.map(p => r(f(p)))); return pts.filter(p => r(f(p)) === b).map(p => p.k); };
+  const bestX = top(p => p.x), bestY = top(p => p.y);
+  order(pts.map(p => p.k)).forEach(k => {
+    const p = pts.find(q => q.k === k), x = sx(p.x), y = sy(p.y);
+    dot(g, x, y, k, { r: RADIUS[role(k)] + 1.5 });
+    const right = x < W - 170;
+    txt(g, x + (right ? 12 : -12), y + 4, M[k].label, { "text-anchor": right ? "start" : "end", class: role(k) === "peer" ? "" : "strong" });
+    const tags = [...(bestX.includes(k) ? ["best on harmful requests"] : []), ...(bestY.includes(k) ? ["best on safe requests"] : [])];
+    tags.forEach((tag, i) => pill(g, x + (right ? 12 : -12), y + 22 + i * 22, tag, right ? "start" : "end"));
+    const hit = el("circle", { cx: x, cy: y, r: 16, class: "hit" }, g);
+    hover(hit, () => [[`${pct(p.x)} safe on harmful`, M[k].label], [`${pct(p.y)} answered when safe`, ""]]);
+  });
+  table("t-scatter", ["Model", "Harmful answered safely", "Safe answered"], pts.map(p => [M[p.k].label, pct(p.x, 1), pct(p.y, 1)]));
+}
+
+// one row per benchmark, one dot per model on a shared axis
+function strip(host, rows, groups) {
+  const W = 900, L = 250, R = 70, rowH = 30, gapH = 34;
+  const height = rows.length * rowH + Object.keys(groups).length * gapH + 30;
+  const s = svg(document.getElementById(host), W, height);
+  let y = 0;
+  for (const [gid, gname] of Object.entries(groups)) {
+    const rs = rows.filter(r => r.group === gid);
+    if (!rs.length) continue;
+    y += gapH;
+    txt(s, 0, y - 10, gname, { class: "strong" });
+    for (const r of rs) {
+      const sx = v => L + v * (W - L - R);
+      const cy = y + rowH / 2;
+      txt(s, 0, cy + 4, r.label, { class: "ink" });
+      const hint = { high: "↑", low: "↓", mid50: "50% best", none: "" }[r.better];
+      if (hint) txt(s, L - 12, cy + 4, hint, { "text-anchor": "end", class: "muted" });
+      el("line", { x1: sx(0), x2: sx(1), y1: cy, y2: cy, stroke: "var(--grid)" }, s);
+      if (r.better === "mid50") el("line", { x1: sx(0.5), x2: sx(0.5), y1: cy - 9, y2: cy + 9, stroke: "var(--axis)" }, s);
+      const g = el("g", {}, s);
+      order(Object.keys(r.values)).forEach(k => {
+        const v = r.values[k];
+        if (!v) return;
+        const x = sx(v.mean);
+        if (role(k) !== "peer" && v.sd > 0) el("line", { x1: sx(v.mean - v.sd), x2: sx(v.mean + v.sd), y1: cy, y2: cy, stroke: COLOR[role(k)], "stroke-width": 2, "stroke-linecap": "round", opacity: 0.45 }, g);
+        dot(g, x, cy, k);
+        const hit = el("circle", { cx: x, cy, r: 12, class: "hit" }, g);
+        hover(hit, () => [[`${pct(v.mean, 1)}${v.n > 1 ? ` ± ${pct(v.sd, 1)}` : ""}`, M[k].label],
+                          [r.label, `${r.note}${v.n > 1 ? `; ${v.n} runs` : ""}`]]);
+      });
+      const f = r.values[FOCUS];
+      if (f) txt(s, W - R + 10, cy + 4, pct(f.mean), { class: "strong" });
+      y += rowH;
+    }
+  }
+  // axis ticks under the last row
+  const sx = v => L + v * (W - L - R);
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => txt(s, sx(v), y + 18, pct(v), { "text-anchor": "middle", class: "muted" }));
+  const names = DATA.models.map(m => m.key);
+  table(host.replace("c-", "t-"), ["Benchmark", ...names.map(k => M[k].label)],
+    rows.map(r => [r.label, ...names.map(k => r.values[k] ? pct(r.values[k].mean, 1) + (r.values[k].n > 1 ? ` ± ${pct(r.values[k].sd, 1)}` : "") : "n/a")]));
+}
+
+function seqColor(v) {
+  const ramp = css("--seq").split(",").map(c => c.trim());
+  const i = Math.min(ramp.length - 1, Math.max(0, Math.round(v * (ramp.length - 1))));
+  return ramp[i];
+}
+function heatmap() {
+  const { categories, values } = DATA.sorry;
+  if (!categories.length) return;
+  const keys = order(DATA.models.map(m => m.key).filter(k => values[k])).reverse();
+  const W = 900, L = 330, top = 36, cell = 15, colW = (W - L) / keys.length;
+  const meanH = 40, s = svg(document.getElementById("c-sorry"), W, top + categories.length * (cell + 2) + meanH + 44);
+  keys.forEach((k, j) => {
+    const x = L + j * colW + colW / 2;
+    txt(s, x, top - 12, M[k].label, { "text-anchor": "middle", class: role(k) === "peer" ? "" : "strong" });
+    if (role(k) !== "peer") el("circle", { cx: x - M[k].label.length * 3.4 - 10, cy: top - 16, r: 4, fill: COLOR[role(k)] }, s);
+  });
+  categories.forEach((c, i) => {
+    const y = top + i * (cell + 2);
+    const label = c.length > 50 ? c.slice(0, 48) + "…" : c;
+    txt(s, L - 10, y + cell - 3, label, { "text-anchor": "end", class: "ink" }).appendChild(el("title")).textContent = c;
+    keys.forEach((k, j) => {
+      const v = values[k][i];
+      const r = el("rect", { x: L + j * colW + 1, y, width: colW - 2, height: cell, rx: 3, fill: seqColor(v) }, s);
+      hover(r, () => [[`${pct(v)} fulfilled`, M[k].label], [c, ""]]);
+    });
+  });
+  // mean row: the winner is the model that fulfills the fewest unsafe requests
+  const my = top + categories.length * (cell + 2) + 6;
+  const means = Object.fromEntries(keys.map(k => [k, values[k].reduce((a, b) => a + b) / values[k].length]));
+  const lowest = Math.min(...keys.map(k => Math.round(100 * means[k])));
+  txt(s, L - 10, my + 18, "mean over all topics (lower is safer)", { "text-anchor": "end", class: "strong" });
+  keys.forEach((k, j) => {
+    const isBest = Math.round(100 * means[k]) === lowest;
+    if (isBest) bestTag(s, L + j * colW + 3, my - 2, colW - 6, meanH - 6);
+    txt(s, L + j * colW + colW / 2, my + 23, isBest ? `★ ${pct(means[k])}` : pct(means[k]), { "text-anchor": "middle", class: "strong", "font-size": 15 });
+  });
+  // scale legend
+  const ly = my + meanH + 4;
+  txt(s, L - 10, ly + 10, "fulfilled", { "text-anchor": "end", class: "muted" });
+  [0, 0.25, 0.5, 0.75, 1].forEach((v, i) => {
+    el("rect", { x: L + i * 60, y: ly, width: 58, height: 12, rx: 2, fill: seqColor(v) }, s);
+    txt(s, L + i * 60 + 29, ly + 28, pct(v), { "text-anchor": "middle", class: "muted" });
+  });
+  table("t-sorry", ["Category", ...keys.map(k => M[k].label)], categories.map((c, i) => [c, ...keys.map(k => pct(values[k][i]))]));
+}
+
+function simpleqaBars() {
+  const keys = order([...DATA.models, ...DATA.variants].map(m => m.key).filter(k => DATA.simpleqa[k])).reverse();
+  if (!keys.length) return;
+  const W = 900, L = 140, R = 330, bar = 20, rowH = 36;
+  const s = svg(document.getElementById("c-simpleqa"), W, keys.length * rowH + 30);
+  const round = v => Math.round(1000 * v);
+  const ranked = keys.filter(k => !VARIANT.has(k));
+  const mostCorrect = Math.max(...ranked.map(k => round(DATA.simpleqa[k].correct)));
+  const fewestWrong = Math.min(...ranked.map(k => round(DATA.simpleqa[k].incorrect)));
+  const sx = v => v * (W - L - R);
+  legend("l-simpleqa", [["var(--correct)", "correct", "rect"], ["var(--wrong)", "incorrect", "rect"], ["var(--abstain)", "not attempted", "rect"]]);
+  keys.forEach((k, i) => {
+    const r = DATA.simpleqa[k], y = i * rowH + 6;
+    txt(s, L - 12, y + bar / 2 + 4, M[k].label, { "text-anchor": "end", class: role(k) === "peer" ? "ink" : "strong" });
+    if (role(k) !== "peer") dot(s, 8, y + bar / 2, k);
+    let x = L;
+    [["correct", "var(--correct)"], ["incorrect", "var(--wrong)"], ["not_attempted", "var(--abstain)"]].forEach(([part, color], j, arr) => {
+      const w = Math.max(0, sx(r[part]) - (j < arr.length - 1 ? 2 : 0));
+      const last = j === arr.length - 1, first = j === 0;
+      const rect = el("rect", { x, y, width: Math.max(w, 1), height: bar, fill: color, rx: (first || last) ? 4 : 0 }, s);
+      hover(rect, () => [[pct(r[part], 1), M[k].label], [part.replace("_", " "), ""]]);
+      x += w + 2;
+    });
+    txt(s, W - R + 12, y + bar / 2 + 4, `${pct(r.correct, 1)} correct · ${pct(r.incorrect, 1)} wrong`, { class: role(k) === "peer" ? "" : "strong" });
+    if (!VARIANT.has(k)) {
+      let px = W;
+      if (round(r.incorrect) === fewestWrong) px -= pill(s, px, y + bar / 2, "fewest wrong", "end") + 6;
+      if (round(r.correct) === mostCorrect) pill(s, px, y + bar / 2, "most correct", "end");
+    }
+  });
+  table("t-simpleqa", ["Model", "Correct", "Incorrect", "Not attempted", "Correct given attempted", "F1"],
+    keys.map(k => { const r = DATA.simpleqa[k]; return [M[k].label, pct(r.correct, 1), pct(r.incorrect, 1), pct(r.not_attempted, 1), pct(r.acc_given_attempted, 1), pct(r.f1, 1)]; }));
+}
+
+function agreementBars() {
+  const rows = DATA.agreement;
+  if (!rows.length) { document.getElementById("s-agree").hidden = true; return; }
+  const W = 900, L = 220, R = 230, bar = 18, rowH = 32;
+  const s = svg(document.getElementById("c-agree"), W, rows.length * rowH + 30);
+  const sx = v => Math.max(0, v) * (W - L - R);
+  rows.forEach((r, i) => {
+    const y = i * rowH + 4;
+    txt(s, L - 12, y + bar / 2 + 4, r.label, { "text-anchor": "end", class: "ink" });
+    const rect = el("rect", { x: L, y, width: Math.max(sx(r.kappa), 2), height: bar, rx: 4, fill: "var(--ink-2)", opacity: 0.55 }, s);
+    hover(rect, () => [[`κ = ${r.kappa.toFixed(2)}`, r.label], [`${pct(r.agree, 1)} same label`, `${r.n.toLocaleString()} items`]]);
+    const label = txt(s, L + sx(r.kappa) + 8, y + bar / 2 + 4, `κ ${r.kappa.toFixed(2)}`, { class: "strong" });
+    txt(s, L + sx(r.kappa) + 16 + label.getComputedTextLength(), y + bar / 2 + 4, `· ${pct(r.agree)} same verdict`, { class: "muted" });
+  });
+  [0, 0.2, 0.4, 0.6, 0.8, 1].forEach(v => txt(s, L + sx(v), rows.length * rowH + 22, v.toFixed(1), { "text-anchor": "middle", class: "muted" }));
+  table("t-agree", ["Label", "Items", "Same label", "Cohen's kappa"], rows.map(r => [r.label, r.n.toLocaleString(), pct(r.agree, 1), r.kappa.toFixed(2)]));
+}
+
+function prose() {
+  for (const [id, html] of Object.entries(TEXT)) {
+    const e = document.getElementById(id);
+    if (!e) continue;
+    if (id === "notes") { e.replaceChildren(...html.map(s => { const li = document.createElement("li"); li.textContent = s; return li; })); }
+    else e.textContent = html;
+  }
+}
+
+function render() {
+  tiles(); chips(); scatter();
+  strip("c-safety", DATA.safety, SAFETY_GROUPS);
+  modelLegend("l-safety");
+  heatmap(); simpleqaBars();
+  strip("c-fact", DATA.fact, FACT_GROUPS);
+  modelLegend("l-fact", DATA.fact);
+  agreementBars();
+}
+
+// scorecard: numbers for every model, a small bar per cell, the winner of each row framed
+const winners = r => {
+  const round = v => Math.round(100 * v);
+  const score = v => v == null ? -Infinity : r.better === "low" ? -round(v) : r.better === "mid50" ? -Math.abs(round(v) - 50) : round(v);
+  if (r.better === "none") return [];
+  const keys = Object.keys(r.values).filter(k => r.values[k] && !VARIANT.has(k));
+  const best = Math.max(...keys.map(k => score(r.values[k].mean)));
+  return keys.filter(k => score(r.values[k].mean) === best);
+};
+function pill(s, x, cy, label, anchor = "start") {
+  const t = txt(s, 0, cy + 4, label, { "text-anchor": "middle", "font-size": 12, "font-weight": 600, style: "fill: var(--surface)" });
+  const w = t.getComputedTextLength() + 18, x0 = anchor === "end" ? x - w : x;
+  t.setAttribute("x", x0 + w / 2);
+  const r = el("rect", { x: x0, y: cy - 10, width: w, height: 20, rx: 10, fill: "var(--ink)" });
+  s.insertBefore(r, t);
+  return w;
+}
+function bestTag(s, x, y, w, h) {
+  el("rect", { x, y, width: w, height: h, rx: 8, fill: "var(--ink)", "fill-opacity": 0.04, stroke: "var(--ink-2)", "stroke-width": 1.5 }, s);
+}
+function scorecard(host, rows, groups) {
+  const vs = DATA.variants.map(v => v.key).filter(k => rows.some(r => r.values[k]));
+  const keys = [FOCUS, ...vs, ...PEERS];
+  const W = 1100, L = 470, colW = (W - L) / keys.length, rowH = 52, groupH = 46, headH = 40, winsH = 60;
+  const rowsShown = rows.filter(r => keys.some(k => r.values[k]));
+  const nGroups = Object.keys(groups).filter(g => rowsShown.some(r => r.group === g)).length;
+  const H = headH + rowsShown.length * rowH + nGroups * groupH + winsH;
+  const s = svg(document.getElementById(host), W, H);
+  el("rect", { x: L + 2, y: 0, width: colW - 4, height: H, rx: 10, fill: "var(--focus)", opacity: 0.08 }, s);
+  if (vs.length) el("rect", { x: L + colW + 2, y: 0, width: colW * vs.length - 4, height: H, rx: 10, fill: "var(--focus)", opacity: 0.04 }, s);
+  keys.forEach((k, j) => {
+    const words = VARIANT.has(k) ? [M[k].label, "more room"] : [M[k].label];
+    words.forEach((w, i) => txt(s, L + j * colW + colW / 2, 26 + (i - (words.length - 1)) * 15, w,
+      { "text-anchor": "middle", class: k === FOCUS ? "strong" : "ink", "font-size": VARIANT.has(k) ? 12.5 : 15 }));
+  });
+  const wins = Object.fromEntries(keys.map(k => [k, 0]));
+  let y = headH, contests = 0;
+  for (const [gid, gname] of Object.entries(groups)) {
+    const rs = rowsShown.filter(r => r.group === gid);
+    if (!rs.length) continue;
+    txt(s, 0, y + 32, gname, { class: "strong", "font-size": 16 });
+    el("line", { x1: 0, x2: W, y1: y + groupH - 4, y2: y + groupH - 4, stroke: "var(--grid)" }, s);
+    y += groupH;
+    for (const r of rs) {
+      txt(s, 0, y + 22, r.label, { class: "ink", "font-size": 15 });
+      const win = winners(r);
+      txt(s, 0, y + 41, win.length ? r.note : `${r.note} (no winner)`, { class: "muted", "font-size": 12.5 });
+      if (win.length) contests++;
+      win.forEach(k => wins[k]++);
+      keys.forEach((k, j) => {
+        const v = r.values[k]?.mean;
+        if (v == null) return;
+        const cx = L + j * colW + colW / 2, bw = colW * 0.58, isBest = win.includes(k);
+        if (isBest) bestTag(s, L + j * colW + 6, y + 3, colW - 12, rowH - 6);
+        txt(s, cx, y + 26, isBest ? `★ ${pct(v)}` : pct(v), { "text-anchor": "middle", class: isBest ? "strong" : "ink", "font-size": isBest ? 17 : 16 });
+        el("rect", { x: cx - bw / 2, y: y + 35, width: bw, height: 6, rx: 3, fill: "var(--grid)" }, s);
+        el("rect", { x: cx - bw / 2, y: y + 35, width: Math.max(3, bw * Math.min(1, v)), height: 6, rx: 3, fill: k === FOCUS || VARIANT.has(k) ? "var(--focus)" : "var(--peer)", opacity: VARIANT.has(k) ? 0.5 : 1 }, s);
+      });
+      el("line", { x1: 0, x2: W, y1: y + rowH, y2: y + rowH, stroke: "var(--grid)", opacity: 0.6 }, s);
+      y += rowH;
+    }
+  }
+  txt(s, 0, y + 30, "Benchmarks won", { class: "strong", "font-size": 16 });
+  txt(s, 0, y + 49, `out of ${contests}; ties count for every tied model`, { class: "muted", "font-size": 12.5 });
+  keys.forEach((k, j) => txt(s, L + j * colW + colW / 2, y + 38, VARIANT.has(k) ? "–" : String(wins[k]), { "text-anchor": "middle", class: VARIANT.has(k) ? "muted" : "strong", "font-size": 22 }));
+}
+
+const SAFETY_GROUPS = { harmful: "Harmful requests: share answered safely (higher is better)", benign: "Safe requests: share answered (higher is better)", bias: "Toxicity and social bias", hazard: "Dangerous knowledge (a capability, not a safety score)" };
+const FACT_GROUPS = { truthfulqa: "TruthfulQA: common misconceptions (higher is better)", hallulens: "HalluLens: facts from Wikipedia", grounded: "Faithful summaries of news articles", bias: "Stereotypes" };
+
+function exportView(id) {
+  document.documentElement.classList.add("export");
+  compare = null;
+  const box = document.getElementById("export");
+  const t = (TEXT.export || {})[id] || {};
+  const add = (tag, cls, s) => { const e = document.createElement(tag); if (cls) e.className = cls; if (s) e.textContent = s; box.appendChild(e); return e; };
+  add("h1", "", t.title || id);
+  if (t.sub) add("p", "sub", t.sub);
+  const legendHost = add("div", "legend"); legendHost.id = `l-${id}`;
+  const chart = add("div"); chart.id = `c-${id}`;
+  const hidden = add("div"); hidden.id = `t-${id}`; hidden.hidden = true;
+  if (t.how) add("p", "how", t.how);
+  add("footer", "", TEXT.footer || "");
+  if (id === "scatter") { legendHost.remove(); scatter(); }
+  if (id === "safety") { legendHost.remove(); scorecard("c-safety", DATA.safety, SAFETY_GROUPS); }
+  if (id === "fact") { legendHost.remove(); scorecard("c-fact", DATA.fact, FACT_GROUPS); }
+  if (id === "sorry") { legendHost.remove(); heatmap(); }
+  if (id === "simpleqa") simpleqaBars();
+  if (id === "agree") { legendHost.remove(); agreementBars(); }
+}
+
+const themeBtn = document.getElementById("theme");
+const isDark = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+const syncTheme = () => themeBtn.textContent = isDark() ? "Light mode" : "Dark mode";
+themeBtn.onclick = () => { document.documentElement.dataset.theme = isDark() ? "light" : "dark"; syncTheme(); render(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { syncTheme(); render(); });
+const EXPORT = new URLSearchParams(location.search).get("export");
+const THEME = new URLSearchParams(location.search).get("theme");
+if (THEME) document.documentElement.dataset.theme = THEME;
+if (EXPORT) { document.querySelector("main").remove(); exportView(EXPORT); }
+else { syncTheme(); prose(); render(); }
+</script>
+</body>
+</html>

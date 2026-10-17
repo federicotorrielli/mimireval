@@ -1,0 +1,8 @@
+{
+ "report": {
+  "halu_Rate": 0.970086417017505,
+  "refusal_rate": 0.0974,
+  "correct_rate": 0.027
+ },
+ "judge": "deepseek-ai/DeepSeek-V4.1-Flash"
+}

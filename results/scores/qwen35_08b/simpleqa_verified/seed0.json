@@ -1,0 +1,10 @@
+{
+ "report": {
+  "correct": 0.023,
+  "incorrect": 0.963,
+  "not_attempted": 0.014000000000000012,
+  "acc_given_attempted": 0.02332657200811359,
+  "f1": 0.023162134944612285
+ },
+ "judge": "deepseek-ai/DeepSeek-V4.1-Flash"
+}

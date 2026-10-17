@@ -1,0 +1,15 @@
+.env
+.venv/
+.python/
+__pycache__/
+cache/
+logs/
+results/generations/
+results/**/*.jsonl
+!results/scores/*/simpleqa_verified/*.items.jsonl
+!results/scores/*/truthfulqa_gen/*.items.jsonl
+third_party/
+papers/
+notes/
+scripts/finish_*.sh
+scripts/safety_generate.sh

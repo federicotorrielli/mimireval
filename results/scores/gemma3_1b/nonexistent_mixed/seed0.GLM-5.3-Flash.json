@@ -1,0 +1,7 @@
+{
+ "report": {
+  "false_acceptance_rate": 0.9915,
+  "refusal_rate": 0.0085
+ },
+ "judge": "zai-org/GLM-5.3-Flash"
+}

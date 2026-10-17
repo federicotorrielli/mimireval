@@ -1,0 +1,36 @@
+{
+ "results": {
+  "truthfulqa_mc1": {
+   "name": "truthfulqa_mc1",
+   "alias": "truthfulqa_mc1",
+   "sample_len": 817,
+   "acc,none": 0.31211750305997554,
+   "acc_stderr,none": 0.016220756769520894
+  },
+  "truthfulqa_mc2": {
+   "name": "truthfulqa_mc2",
+   "alias": "truthfulqa_mc2",
+   "sample_len": 817,
+   "acc,none": 0.4871507684481147,
+   "acc_stderr,none": 0.015265273821527656
+  },
+  "truthfulqa_da_mc1": {
+   "name": "truthfulqa_da_mc1",
+   "alias": "truthfulqa_da_mc1",
+   "sample_len": 781,
+   "acc,none": 0.23815620998719592,
+   "acc_stderr,none": 0.01525164260307598
+  },
+  "truthfulqa_da_mc2": {
+   "name": "truthfulqa_da_mc2",
+   "alias": "truthfulqa_da_mc2",
+   "sample_len": 781,
+   "acc,none": 0.3886934182928435,
+   "acc_stderr,none": 0.01621668964906064
+  }
+ },
+ "config": {
+  "chat_template": true,
+  "revision": "48d788eca847d4d7548f375ad03d3c9312f6139e"
+ }
+}

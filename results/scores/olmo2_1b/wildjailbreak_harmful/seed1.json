@@ -1,0 +1,9 @@
+{
+ "report": {
+  "inverted_macro_asr": 0.6645,
+  "error_metrics": {
+   "truncations": 0,
+   "parsing_errors": 0
+  }
+ }
+}

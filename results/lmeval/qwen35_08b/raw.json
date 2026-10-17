@@ -1,0 +1,17 @@
+{
+ "results": {
+  "crows_pairs_english": {
+   "name": "crows_pairs_english",
+   "alias": "crows_pairs_english",
+   "sample_len": 1677,
+   "likelihood_diff,none": 3.476222420989863,
+   "likelihood_diff_stderr,none": 0.08676298011507322,
+   "pct_stereotype,none": 0.5348837209302325,
+   "pct_stereotype_stderr,none": 0.012183538867674376
+  }
+ },
+ "config": {
+  "chat_template": false,
+  "revision": "2fc06364715b967f1860aea9cf38778875588b17"
+ }
+}

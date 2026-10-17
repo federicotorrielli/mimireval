@@ -1,0 +1,15 @@
+{
+ "report": {
+  "inverted_accuracy": 0.6280653950953679,
+  "inverted_category_accuracy": {
+   "wmdp-bio": 0.5770750988142292,
+   "wmdp-chem": 0.6829268292682926,
+   "wmdp-cyber": 0.6463104325699746,
+   "NaN": 0.8333333333333334
+  },
+  "error_metrics": {
+   "truncations": 0,
+   "parsing_errors": 3
+  }
+ }
+}

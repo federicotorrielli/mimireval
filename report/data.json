@@ -1,0 +1,1542 @@
+{
+ "models": [
+  {
+   "key": "mimir",
+   "label": "Mimir 1B",
+   "repo": "danish-foundation-models/DFM-Mimir",
+   "revision": "396df88"
+  },
+  {
+   "key": "hrm_text",
+   "label": "HRM-Text 1B",
+   "repo": "sapientinc/HRM-Text-1B",
+   "revision": "22097cb"
+  },
+  {
+   "key": "qwen35_08b",
+   "label": "Qwen 3.5 0.8B",
+   "repo": "Qwen/Qwen3.5-0.8B",
+   "revision": "2fc0636"
+  },
+  {
+   "key": "gemma3_1b",
+   "label": "Gemma 3 1B",
+   "repo": "google/gemma-3-1b-it",
+   "revision": "dcc83ea"
+  },
+  {
+   "key": "olmo2_1b",
+   "label": "OLMo 2 1B",
+   "repo": "allenai/OLMo-2-0425-1B-Instruct",
+   "revision": "48d788e"
+  }
+ ],
+ "variants": [
+  {
+   "key": "mimir_room",
+   "of": "mimir",
+   "label": "Mimir 1B*"
+  }
+ ],
+ "focus": "mimir",
+ "safety": [
+  {
+   "id": "harmbench",
+   "label": "HarmBench",
+   "better": "high",
+   "group": "harmful",
+   "note": "direct harmful requests",
+   "values": {
+    "mimir": {
+     "mean": 0.8520833333333333,
+     "sd": 0.006505206248331651,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.4302083333333333,
+     "sd": 0.013010412496663327,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.6135416666666667,
+     "sd": 0.007864410870073692,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.8354166666666667,
+     "sd": 0.01004546954270101,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.8520833333333333,
+     "sd": 0.0047735163489122925,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "strongreject",
+   "label": "StrongREJECT",
+   "better": "high",
+   "group": "harmful",
+   "note": "harmful requests wrapped in jailbreak tricks",
+   "values": {
+    "mimir": {
+     "mean": 0.9793664632374309,
+     "sd": 0.0020251903319916656,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.8144071490845685,
+     "sd": 0.00364227876352843,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.8713310084277825,
+     "sd": 0.0012536641911317387,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.8695146759662888,
+     "sd": 0.0031890991359617184,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.8978131357163616,
+     "sd": 0.00500636056062954,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "wildguardtest",
+   "label": "WildGuardTest",
+   "better": "high",
+   "group": "harmful",
+   "note": "harmful prompts written by people, some disguised",
+   "values": {
+    "mimir": {
+     "mean": 0.9915442812639075,
+     "sd": 0.002039419534915841,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.6323987538940811,
+     "sd": 0.0030833125190367567,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.7890520694259012,
+     "sd": 0.00875492459853404,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.8651535380507344,
+     "sd": 0.005819624757731213,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.9937694704049843,
+     "sd": 0.004078839069831633,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "wjb_harmful",
+   "label": "WildJailbreak, harmful",
+   "better": "high",
+   "group": "harmful",
+   "note": "harmful requests hidden in long, elaborate stories",
+   "values": {
+    "mimir": {
+     "mean": 0.8721666666666666,
+     "sd": 0.005057996968497859,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.025833333333333337,
+     "sd": 0.007005949852327908,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.28650000000000003,
+     "sd": 0.00259807621135335,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.15716666666666668,
+     "sd": 0.0010408329997330585,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.6633333333333333,
+     "sd": 0.0010408329997330585,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "dan",
+   "label": "Do Anything Now",
+   "better": "high",
+   "group": "harmful",
+   "note": "roleplay jailbreaks that ask the model to drop its rules",
+   "values": {
+    "mimir": {
+     "mean": 0.9,
+     "sd": 0.0033333333333332993,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.12888888888888891,
+     "sd": 0.008388704928078635,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.658888888888889,
+     "sd": 0.01347150628109124,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.27444444444444444,
+     "sd": 0.003849001794597466,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.8022222222222223,
+     "sd": 0.01895413567692446,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "trustllm",
+   "label": "TrustLLM jailbreak",
+   "better": "high",
+   "group": "harmful",
+   "note": "jailbreak prompts from the TrustLLM suite",
+   "values": {
+    "mimir": {
+     "mean": 0.9125,
+     "sd": 0.004330127018922229,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.08083333333333335,
+     "sd": 0.011547005383792526,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.6266666666666666,
+     "sd": 0.030242078852706744,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.7266666666666667,
+     "sd": 0.01376892636821524,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.6924999999999999,
+     "sd": 0.012990381056766559,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "sorrybench",
+   "label": "SORRY-Bench",
+   "better": "high",
+   "group": "harmful",
+   "note": "unsafe requests on 44 topics",
+   "values": {
+    "mimir": {
+     "mean": 0.8886363636363637,
+     "sd": 0.006818181818181834,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.31287878787878787,
+     "sd": 0.005719571541871828,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.5007575757575757,
+     "sd": 0.013699349484867547,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.6931818181818182,
+     "sd": 0.009090909090909094,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.7113636363636363,
+     "sd": 0.010414944761263298,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "xstest_unsafe",
+   "label": "XSTest, unsafe prompts",
+   "better": "high",
+   "group": "harmful",
+   "note": "clearly unsafe questions",
+   "values": {
+    "mimir": {
+     "mean": 0.9066666666666667,
+     "sd": 0.014433756729740658,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.6999999999999998,
+     "sd": 0.0050000000000000044,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.6966666666666667,
+     "sd": 0.00763762615825974,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.8450000000000001,
+     "sd": 0.0,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.8649999999999999,
+     "sd": 0.013228756555322964,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "xstest_safe",
+   "label": "XSTest, safe prompts",
+   "better": "high",
+   "group": "benign",
+   "note": "safe questions that sound unsafe ('how do I kill a process?')",
+   "values": {
+    "mimir": {
+     "mean": 0.8506666666666667,
+     "sd": 0.01847520861406804,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.8946666666666667,
+     "sd": 0.0061101009266077925,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.9373333333333332,
+     "sd": 0.012858201014657244,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.8866666666666667,
+     "sd": 0.00461880215351701,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.916,
+     "sd": 0.010583005244258372,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "wjb_benign",
+   "label": "WildJailbreak, benign",
+   "better": "high",
+   "group": "benign",
+   "note": "harmless requests written like jailbreaks",
+   "values": {
+    "mimir": {
+     "mean": 0.8039999999999999,
+     "sd": 0.013856406460550967,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.96,
+     "sd": 0.008000000000000007,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.8346666666666667,
+     "sd": 0.022030282189144428,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.992,
+     "sd": 0.0,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.944,
+     "sd": 0.014422205101855908,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "orbench",
+   "label": "OR-Bench-Hard-1K",
+   "better": "high",
+   "group": "benign",
+   "note": "harmless prompts that look toxic",
+   "values": {
+    "mimir": {
+     "mean": 0.3136214303765479,
+     "sd": 0.014727118811557702,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.7313621430376548,
+     "sd": 0.006358223717669465,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.6509982309830681,
+     "sd": 0.014088814621952364,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.625979277230225,
+     "sd": 0.006795213373640991,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.5670962850644429,
+     "sd": 0.011219597109134758,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "toxigen",
+   "label": "ToxiGen",
+   "better": "high",
+   "group": "bias",
+   "note": "continuations of hateful text that stay free of toxicity",
+   "values": {
+    "mimir": {
+     "mean": 0.9064047619047618,
+     "sd": 0.0005067570631854847,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.8886428571428571,
+     "sd": 0.0017008401285415241,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.9427619047619048,
+     "sd": 0.000975028344259187,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.9967619047619047,
+     "sd": 0.00029738085706658684,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.9998809523809524,
+     "sd": 4.123930494207496e-05,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "bbq_acc",
+   "label": "BBQ accuracy",
+   "better": "high",
+   "group": "bias",
+   "note": "questions that tempt a stereotyped answer",
+   "values": {
+    "mimir": {
+     "mean": 0.8212107690019336,
+     "sd": 0.007380791919627046,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.5028261192919827,
+     "sd": 0.0023647349539765677,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.5167336010709506,
+     "sd": 0.008345204912657288,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.37371709058456043,
+     "sd": 0.004274262396400722,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.31957459467499627,
+     "sd": 0.0012288198454453554,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "bbq_bias",
+   "label": "BBQ bias size, ambiguous",
+   "better": "low",
+   "group": "bias",
+   "note": "lean towards the stereotype; lower is better",
+   "values": {
+    "mimir": {
+     "mean": 0.06202164159529411,
+     "sd": 0.007087435285316245,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.04509427594797608,
+     "sd": 0.01496709485053895,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.06227303299649173,
+     "sd": 0.005299660735936546,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.04153562940558883,
+     "sd": 0.007843780276220024,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.017073110977324227,
+     "sd": 0.005281024226527389,
+     "n": 3
+    }
+   }
+  },
+  {
+   "id": "wmdp",
+   "label": "WMDP accuracy",
+   "better": "none",
+   "group": "hazard",
+   "note": "dangerous bio, chemistry, cyber knowledge; chance is 25%",
+   "values": {
+    "mimir": {
+     "mean": 0.4336966394187103,
+     "sd": 0.011425745345512333,
+     "n": 3
+    },
+    "hrm_text": {
+     "mean": 0.3578564940962761,
+     "sd": 0.006143392033818666,
+     "n": 3
+    },
+    "qwen35_08b": {
+     "mean": 0.4091734786557675,
+     "sd": 0.015007004216038424,
+     "n": 3
+    },
+    "gemma3_1b": {
+     "mean": 0.38283378746594005,
+     "sd": 0.009536784741144397,
+     "n": 3
+    },
+    "olmo2_1b": {
+     "mean": 0.34377838328792004,
+     "sd": 0.028718277481857235,
+     "n": 3
+    }
+   }
+  }
+ ],
+ "fact": [
+  {
+   "id": "tqa_mc1",
+   "label": "TruthfulQA MC1, English",
+   "better": "high",
+   "group": "truthfulqa",
+   "note": "picks the one true answer among false ones",
+   "values": {
+    "mimir": {
+     "mean": 0.34394124847001223,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.2839657282741738,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.3072215422276622,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.2729498164014688,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.31211750305997554,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": null
+   },
+   "second": {}
+  },
+  {
+   "id": "tqa_mc1_da",
+   "label": "TruthfulQA MC1, Danish",
+   "better": "high",
+   "group": "truthfulqa",
+   "note": "the same, Danish translation",
+   "values": {
+    "mimir": {
+     "mean": 0.3559539052496799,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.23687580025608196,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.2893725992317542,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.2573623559539053,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.23815620998719592,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": null
+   },
+   "second": {}
+  },
+  {
+   "id": "tqa_mc2",
+   "label": "TruthfulQA MC2, English",
+   "better": "high",
+   "group": "truthfulqa",
+   "note": "probability the model puts on true answers",
+   "values": {
+    "mimir": {
+     "mean": 0.5321321427543577,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.4474542249334163,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.46547360007125493,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.4389898284598102,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.4871507684481147,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": null
+   },
+   "second": {}
+  },
+  {
+   "id": "tqa_mc2_da",
+   "label": "TruthfulQA MC2, Danish",
+   "better": "high",
+   "group": "truthfulqa",
+   "note": "the same, Danish translation",
+   "values": {
+    "mimir": {
+     "mean": 0.5221924381856258,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.40636985299474637,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.453200328679339,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.4293547907305036,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.3886934182928435,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": null
+   },
+   "second": {}
+  },
+  {
+   "id": "tqa_mc1_gen",
+   "label": "TruthfulQA MC1, letter",
+   "better": "high",
+   "group": "truthfulqa",
+   "note": "writes the letter of the true answer",
+   "values": {
+    "mimir": {
+     "mean": 0.5067319461444308,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.24724602203182375,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.3243574051407589,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.23623011015911874,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.21297429620563035,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": null
+   },
+   "second": {
+    "mimir": null,
+    "hrm_text": null,
+    "qwen35_08b": null,
+    "gemma3_1b": null,
+    "olmo2_1b": null
+   }
+  },
+  {
+   "id": "tqa_truthful",
+   "label": "TruthfulQA, truthful",
+   "better": "high",
+   "group": "truthfulqa",
+   "note": "free answers judged true",
+   "values": {
+    "mimir": {
+     "mean": 0.34394124847001223,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.2350061199510404,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.08078335373317014,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.15177478580171358,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.3072215422276622,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": {
+     "mean": 0.397796817625459,
+     "sd": 0.0,
+     "n": 1
+    }
+   },
+   "second": {
+    "mimir": 0.401468788249694,
+    "hrm_text": 0.2839657282741738,
+    "qwen35_08b": 0.11627906976744186,
+    "gemma3_1b": 0.16401468788249693,
+    "olmo2_1b": 0.37209302325581395
+   }
+  },
+  {
+   "id": "tqa_ti",
+   "label": "TruthfulQA, truthful and informative",
+   "better": "high",
+   "group": "truthfulqa",
+   "note": "free answers judged true and useful",
+   "values": {
+    "mimir": {
+     "mean": 0.2558139534883721,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.14443084455324356,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.05752753977968176,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.13219094247246022,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.25703794369645044,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": {
+     "mean": 0.2594859241126071,
+     "sd": 0.0,
+     "n": 1
+    }
+   },
+   "second": {
+    "mimir": 0.3268053855569155,
+    "hrm_text": 0.2178702570379437,
+    "qwen35_08b": 0.10281517747858017,
+    "gemma3_1b": 0.15789473684210525,
+    "olmo2_1b": 0.3537331701346389
+   }
+  },
+  {
+   "id": "precise_halu",
+   "label": "PreciseWikiQA hallucination",
+   "better": "low",
+   "group": "hallulens",
+   "note": "wrong among answered questions; lower is better",
+   "values": {
+    "mimir": {
+     "mean": 0.9723633407843935,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.9697959183673469,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.9718139722166298,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.9696479158235533,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.9450713221205025,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": {
+     "mean": 0.970086417017505,
+     "sd": 0.0,
+     "n": 1
+    }
+   },
+   "second": {
+    "mimir": 0.9669911129919594,
+    "hrm_text": 0.9645346453464535,
+    "qwen35_08b": 0.9687877567458719,
+    "gemma3_1b": 0.9664035620319773,
+    "olmo2_1b": 0.9386304909560723
+   }
+  },
+  {
+   "id": "precise_refusal",
+   "label": "PreciseWikiQA refusal",
+   "better": "none",
+   "group": "hallulens",
+   "note": "questions the model declines",
+   "values": {
+    "mimir": {
+     "mean": 0.0158,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.02,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.0066,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.0116,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.0606,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": {
+     "mean": 0.0974,
+     "sd": 0.0,
+     "n": 1
+    }
+   },
+   "second": {
+    "mimir": 0.0548,
+    "hrm_text": 0.0244,
+    "qwen35_08b": 0.0068,
+    "gemma3_1b": 0.0118,
+    "olmo2_1b": 0.0712
+   }
+  },
+  {
+   "id": "mixed_false_acc",
+   "label": "Invented names taken as real",
+   "better": "low",
+   "group": "hallulens",
+   "note": "invented animals, plants, drugs; lower is better",
+   "values": {
+    "mimir": {
+     "mean": 0.961875,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.974625,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.936125,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.976,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.92675,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": {
+     "mean": 0.919625,
+     "sd": 0.0,
+     "n": 1
+    }
+   },
+   "second": {
+    "mimir": 0.984375,
+    "hrm_text": 0.986875,
+    "qwen35_08b": 0.953625,
+    "gemma3_1b": 0.9915,
+    "olmo2_1b": 0.935
+   }
+  },
+  {
+   "id": "longwiki_prec",
+   "label": "LongWiki precision",
+   "better": "high",
+   "group": "hallulens",
+   "note": "claims in long answers backed by Wikipedia",
+   "values": {
+    "mimir": {
+     "mean": 0.2704671656067647,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.2900070695880791,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.1849812891747851,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.2128910808542266,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.3551715501411085,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": null
+   },
+   "second": {
+    "mimir": 0.2917470234725553,
+    "hrm_text": 0.3158023411456307,
+    "qwen35_08b": 0.1922624644140891,
+    "gemma3_1b": 0.2046716372407477,
+    "olmo2_1b": 0.3818283051482741
+   }
+  },
+  {
+   "id": "longwiki_f1",
+   "label": "LongWiki F1@32",
+   "better": "high",
+   "group": "hallulens",
+   "note": "precision and coverage of the claims",
+   "values": {
+    "mimir": {
+     "mean": 0.2041948152070233,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.2062812941600044,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.1993201358901151,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.2079398370120825,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.3888413287691202,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": null
+   },
+   "second": {
+    "mimir": 0.231030542117818,
+    "hrm_text": 0.2391790910754887,
+    "qwen35_08b": 0.2263476443581606,
+    "gemma3_1b": 0.2376794200426672,
+    "olmo2_1b": 0.4430847042266044
+   }
+  },
+  {
+   "id": "hhem_halu",
+   "label": "Summary hallucination (HHEM)",
+   "better": "low",
+   "group": "grounded",
+   "note": "news summaries with unsupported content; lower is better",
+   "values": {
+    "mimir": {
+     "mean": 0.12647374062165062,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.13221406086044074,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.02210526315789474,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.04862579281183932,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.1731374606505771,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": null
+   },
+   "second": {
+    "mimir": null,
+    "hrm_text": null,
+    "qwen35_08b": null,
+    "gemma3_1b": null,
+    "olmo2_1b": null
+   }
+  },
+  {
+   "id": "hhem_answer",
+   "label": "Summary answer rate",
+   "better": "high",
+   "group": "grounded",
+   "note": "articles the model agreed to summarize",
+   "values": {
+    "mimir": {
+     "mean": 0.9790136411332634,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 1.0,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.9968520461699895,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.9926547743966422,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 1.0,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": null
+   },
+   "second": {
+    "mimir": null,
+    "hrm_text": null,
+    "qwen35_08b": null,
+    "gemma3_1b": null,
+    "olmo2_1b": null
+   }
+  },
+  {
+   "id": "crows",
+   "label": "CrowS-Pairs stereotype",
+   "better": "mid50",
+   "group": "bias",
+   "note": "prefers the stereotyped sentence; 50% is no preference",
+   "values": {
+    "mimir": {
+     "mean": 0.4949314251639833,
+     "sd": 0.0,
+     "n": 1
+    },
+    "hrm_text": {
+     "mean": 0.5181872391174717,
+     "sd": 0.0,
+     "n": 1
+    },
+    "qwen35_08b": {
+     "mean": 0.5348837209302325,
+     "sd": 0.0,
+     "n": 1
+    },
+    "gemma3_1b": {
+     "mean": 0.531902206320811,
+     "sd": 0.0,
+     "n": 1
+    },
+    "olmo2_1b": {
+     "mean": 0.6267143709004174,
+     "sd": 0.0,
+     "n": 1
+    },
+    "mimir_room": null
+   },
+   "second": {}
+  }
+ ],
+ "sorry": {
+  "categories": [
+   "personal insulting words",
+   "social-group insulting words",
+   "threatening words",
+   "lewd and obscene words",
+   "libelous words",
+   "self-harm",
+   "violent crimes",
+   "harassment",
+   "sexual crimes",
+   "property crimes",
+   "public order crimes",
+   "general advice for system intrusion, hacking & cyber attacks, data privacy and confidentiality violations",
+   "malware code generation",
+   "fraud, scams, and deception",
+   "financial crimes",
+   "intellectual property infringement",
+   "personal identifiable information violations",
+   "illegal crafting, manufacturing, and distribution",
+   "terrorism",
+   "child-related crimes",
+   "animal-related crimes",
+   "environmental crimes",
+   "evasion of law enforcement",
+   "human elimination & world domination",
+   "advice on adult content",
+   "sexual explicit content generation",
+   "non-sexual explicit content generation",
+   "fake news generation",
+   "false advertising",
+   "advice on discrimination behaviors",
+   "military use",
+   "political belief promotion",
+   "ethical belief promotion",
+   "religion promotion",
+   "social stereotype promotion",
+   "extremist content promotion",
+   "conspiracy theories promotion",
+   "false common knowledge promotion",
+   "harmful & unhealthy behaviors promotion",
+   "medical advice",
+   "financial advice",
+   "legal consulting advice",
+   "governance decision advice",
+   "dangerous machinery operation advice"
+  ],
+  "values": {
+   "mimir": [
+    0.0,
+    0.0,
+    0.2666666666666666,
+    0.033333333333333326,
+    0.09999999999999998,
+    0.09999999999999998,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.19999999999999984,
+    0.09999999999999998,
+    0.06666666666666676,
+    0.09999999999999998,
+    0.06666666666666676,
+    0.09999999999999998,
+    0.0,
+    0.1333333333333333,
+    0.4,
+    0.30000000000000016,
+    0.0,
+    0.16666666666666663,
+    0.06666666666666676,
+    0.33333333333333337,
+    0.2666666666666666,
+    0.4,
+    0.5333333333333334,
+    0.033333333333333326,
+    0.033333333333333326,
+    0.0,
+    0.0,
+    0.09999999999999998,
+    0.16666666666666663,
+    0.16666666666666663,
+    0.5,
+    0.0,
+    0.16666666666666663
+   ],
+   "hrm_text": [
+    0.5,
+    0.5,
+    0.7666666666666667,
+    0.5999999999999999,
+    0.5333333333333334,
+    0.43333333333333335,
+    0.4666666666666667,
+    0.5333333333333334,
+    0.09999999999999998,
+    0.2666666666666666,
+    0.8666666666666667,
+    0.8666666666666667,
+    0.9,
+    0.5666666666666667,
+    0.5666666666666667,
+    0.9,
+    0.5999999999999999,
+    0.9,
+    0.8666666666666667,
+    0.2666666666666666,
+    0.6333333333333333,
+    0.7333333333333334,
+    0.43333333333333335,
+    0.6666666666666667,
+    0.6666666666666667,
+    0.9,
+    0.9333333333333333,
+    0.8666666666666667,
+    1.0,
+    0.7666666666666667,
+    0.8666666666666667,
+    0.7,
+    0.9333333333333333,
+    1.0,
+    0.8666666666666667,
+    0.9,
+    0.8666666666666667,
+    0.8666666666666667,
+    0.7333333333333334,
+    0.6666666666666667,
+    0.5999999999999999,
+    0.5333333333333334,
+    0.5,
+    0.5999999999999999
+   ],
+   "qwen35_08b": [
+    0.20000000000000007,
+    0.2666666666666666,
+    0.5,
+    0.43333333333333335,
+    0.16666666666666663,
+    0.2333333333333334,
+    0.2333333333333334,
+    0.2333333333333334,
+    0.20000000000000007,
+    0.4,
+    0.4,
+    0.4,
+    0.20000000000000007,
+    0.5333333333333334,
+    0.2333333333333334,
+    0.7666666666666667,
+    0.2666666666666666,
+    0.6666666666666667,
+    0.19999999999999984,
+    0.29999999999999993,
+    0.4,
+    0.5666666666666667,
+    0.5,
+    0.20000000000000007,
+    0.43333333333333324,
+    0.43333333333333335,
+    0.7333333333333334,
+    0.5333333333333334,
+    0.9333333333333333,
+    0.6666666666666667,
+    0.7333333333333334,
+    0.7,
+    0.8666666666666667,
+    1.0,
+    0.7,
+    0.4,
+    0.5999999999999999,
+    0.7333333333333334,
+    0.7,
+    0.5999999999999999,
+    0.7,
+    0.8333333333333334,
+    0.3666666666666667,
+    0.8
+   ],
+   "gemma3_1b": [
+    0.0,
+    0.0,
+    0.19999999999999984,
+    0.33333333333333337,
+    0.0,
+    0.0,
+    0.09999999999999998,
+    0.0,
+    0.033333333333333326,
+    0.09999999999999998,
+    0.0,
+    0.0,
+    0.0,
+    0.2333333333333334,
+    0.2333333333333334,
+    0.8666666666666667,
+    0.1333333333333333,
+    0.30000000000000016,
+    0.1333333333333333,
+    0.09999999999999998,
+    0.30000000000000016,
+    0.2666666666666666,
+    0.2333333333333334,
+    0.033333333333333326,
+    0.43333333333333335,
+    0.2333333333333334,
+    0.09999999999999998,
+    0.5666666666666667,
+    0.9,
+    0.5999999999999999,
+    0.6333333333333333,
+    0.33333333333333337,
+    0.6666666666666667,
+    0.7666666666666667,
+    0.30000000000000016,
+    0.1333333333333333,
+    0.30000000000000016,
+    0.6333333333333333,
+    0.0,
+    0.29999999999999993,
+    0.9666666666666667,
+    0.8,
+    0.4,
+    0.8333333333333334
+   ],
+   "olmo2_1b": [
+    0.0,
+    0.09999999999999998,
+    0.43333333333333335,
+    0.43333333333333335,
+    0.0,
+    0.09999999999999998,
+    0.0,
+    0.0,
+    0.0,
+    0.09999999999999998,
+    0.0,
+    0.0,
+    0.06666666666666676,
+    0.2333333333333334,
+    0.0,
+    0.2666666666666666,
+    0.1333333333333333,
+    0.3666666666666667,
+    0.09999999999999998,
+    0.09999999999999998,
+    0.09999999999999998,
+    0.33333333333333337,
+    0.3666666666666667,
+    0.06666666666666676,
+    0.6333333333333333,
+    0.4666666666666667,
+    0.43333333333333335,
+    0.16666666666666663,
+    0.7333333333333334,
+    0.20000000000000007,
+    0.4666666666666667,
+    0.5666666666666667,
+    0.7,
+    0.7666666666666667,
+    0.3666666666666667,
+    0.20000000000000007,
+    0.06666666666666676,
+    0.3666666666666667,
+    0.2333333333333334,
+    0.6666666666666667,
+    0.7333333333333334,
+    0.9333333333333333,
+    0.09999999999999998,
+    0.5999999999999999
+   ]
+  }
+ },
+ "simpleqa": {
+  "mimir": {
+   "correct": 0.025,
+   "incorrect": 0.919,
+   "not_attempted": 0.05600000000000005,
+   "acc_given_attempted": 0.02648305084745763,
+   "f1": 0.0257201646090535
+  },
+  "hrm_text": {
+   "correct": 0.02,
+   "incorrect": 0.928,
+   "not_attempted": 0.052000000000000046,
+   "acc_given_attempted": 0.021097046413502112,
+   "f1": 0.020533880903490762
+  },
+  "qwen35_08b": {
+   "correct": 0.023,
+   "incorrect": 0.963,
+   "not_attempted": 0.014000000000000012,
+   "acc_given_attempted": 0.02332657200811359,
+   "f1": 0.023162134944612285
+  },
+  "gemma3_1b": {
+   "correct": 0.023,
+   "incorrect": 0.962,
+   "not_attempted": 0.015000000000000013,
+   "acc_given_attempted": 0.023350253807106598,
+   "f1": 0.023173803526448364
+  },
+  "olmo2_1b": {
+   "correct": 0.023,
+   "incorrect": 0.852,
+   "not_attempted": 0.125,
+   "acc_given_attempted": 0.026285714285714284,
+   "f1": 0.024533333333333334
+  },
+  "mimir_room": {
+   "correct": 0.025,
+   "incorrect": 0.896,
+   "not_attempted": 0.07899999999999996,
+   "acc_given_attempted": 0.02714440825190011,
+   "f1": 0.026028110359187923
+  }
+ },
+ "agreement": [
+  {
+   "label": "PreciseWikiQA refusal",
+   "n": 25000,
+   "kappa": 0.7433415995705551,
+   "agree": 0.98584
+  },
+  {
+   "label": "PreciseWikiQA hallucination",
+   "n": 25000,
+   "kappa": 0.9152224469444528,
+   "agree": 0.9942
+  },
+  {
+   "label": "Invented names taken as real",
+   "n": 40000,
+   "kappa": 0.7142438999492552,
+   "agree": 0.979425
+  },
+  {
+   "label": "SimpleQA grade",
+   "n": 5000,
+   "kappa": 0.887171572960365,
+   "agree": 0.9836
+  },
+  {
+   "label": "TruthfulQA truthful",
+   "n": 4085,
+   "kappa": 0.8056515903080851,
+   "agree": 0.9277845777233782
+  },
+  {
+   "label": "TruthfulQA informative",
+   "n": 4085,
+   "kappa": 0.54485642558953,
+   "agree": 0.9226438188494492
+  }
+ ],
+ "judges": {
+  "primary": "deepseek-ai/DeepSeek-V4.1-Flash",
+  "second": "zai-org/GLM-5.3-Flash"
+ }
+}

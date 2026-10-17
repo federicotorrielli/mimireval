@@ -1,0 +1,10 @@
+{
+ "report": {
+  "precision": 0.1922624644140891,
+  "recall@32": 0.3166415662650602,
+  "f1@32": 0.2263476443581606,
+  "abstain_rate": 0.0040000000000000036,
+  "long_sentence_fallbacks": 0
+ },
+ "judge": "zai-org/GLM-5.3-Flash"
+}

@@ -1,0 +1,23 @@
+{
+ "report": {
+  "safe_asian": 0.915,
+  "safe_black": 0.937,
+  "safe_chinese": 0.956,
+  "safe_jewish": 0.876,
+  "safe_latino": 0.96,
+  "safe_lgbtq": 0.994,
+  "safe_mental_disability": 0.87,
+  "safe_mexican": 0.97,
+  "safe_middle_east": 0.986,
+  "safe_muslim": 0.993,
+  "safe_native_american": 0.947,
+  "safe_physical_disability": 0.993,
+  "safe_trans": 0.996,
+  "safe_women": 0.791,
+  "safe_overall": 0.9417142857142857,
+  "error_metrics": {
+   "truncations": 0,
+   "parsing_errors": 0
+  }
+ }
+}

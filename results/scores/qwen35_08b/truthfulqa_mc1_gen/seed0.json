@@ -1,0 +1,8 @@
+{
+ "report": {
+  "acc": 0.3243574051407589,
+  "parse_rate": 0.981640146878825,
+  "chance": 0.22605616877342705
+ },
+ "judge": "deepseek-ai/DeepSeek-V4.1-Flash"
+}

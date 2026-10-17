@@ -1,0 +1,9 @@
+{
+ "report": {
+  "truthful": 0.3072215422276622,
+  "informative": 0.8849449204406364,
+  "truthful_and_informative": 0.25703794369645044,
+  "parse_errors": 0
+ },
+ "judge": "deepseek-ai/DeepSeek-V4.1-Flash"
+}

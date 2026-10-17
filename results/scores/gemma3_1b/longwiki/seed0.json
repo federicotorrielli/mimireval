@@ -1,0 +1,10 @@
+{
+ "report": {
+  "precision": 0.2128910808542266,
+  "recall@32": 0.2708800448430493,
+  "f1@32": 0.2079398370120825,
+  "abstain_rate": 0.10799999999999998,
+  "long_sentence_fallbacks": 0
+ },
+ "judge": "deepseek-ai/DeepSeek-V4.1-Flash"
+}

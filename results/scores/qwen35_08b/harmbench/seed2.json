@@ -1,0 +1,23 @@
+{
+ "report": {
+  "inverted_micro_asr_lower": 0.621875,
+  "inverted_functional_category_asr_lower": {
+   "standard": 0.7672955974842768,
+   "contextual": 0.2716049382716049,
+   "copyright": 0.6875
+  },
+  "inverted_semantic_category_asr_lower": {
+   "misinformation_disinformation": 0.31481481481481477,
+   "chemical_biological": 0.5476190476190477,
+   "illegal": 0.8490566037735849,
+   "harmful": 0.7222222222222222,
+   "copyright": 0.6875,
+   "cybercrime_intrusion": 0.5576923076923077,
+   "harassment_bullying": 0.8095238095238095
+  },
+  "error_metrics": {
+   "truncations": 0,
+   "parsing_errors": 0
+  }
+ }
+}

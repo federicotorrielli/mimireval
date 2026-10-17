@@ -1,0 +1,9 @@
+{
+ "report": {
+  "truthful": 0.16401468788249693,
+  "informative": 0.981640146878825,
+  "truthful_and_informative": 0.15789473684210525,
+  "parse_errors": 0
+ },
+ "judge": "zai-org/GLM-5.3-Flash"
+}

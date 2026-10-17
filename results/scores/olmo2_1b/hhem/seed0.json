@@ -1,0 +1,10 @@
+{
+ "report": {
+  "hallucination_rate": 0.1731374606505771,
+  "factual_consistency_rate": 0.8268625393494229,
+  "answer_rate": 1.0,
+  "avg_summary_words": 69.8090241343127,
+  "mean_hhem_score": 0.7739400384724844
+ },
+ "judge": "deepseek-ai/DeepSeek-V4.1-Flash"
+}

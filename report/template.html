@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mimir: safety and hallucination evaluation</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10);
+  --focus: #2a78d6; --compare: #eb6834; --peer: #a8a69f;
+  --correct: #1baf7a; --wrong: #e34948; --abstain: #c3c2b7;
+  --seq: #cde2fb,#b7d3f6,#9ec5f4,#86b6ef,#6da7ec,#5598e7,#3987e5,#2a78d6,#256abf,#1c5cab,#184f95,#104281,#0d366b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+    --focus: #3987e5; --compare: #d95926; --peer: #6b6a64;
+    --correct: #199e70; --wrong: #e66767; --abstain: #4a4945;
+    --seq: #0d366b,#104281,#184f95,#1c5cab,#256abf,#2a78d6,#3987e5,#5598e7,#6da7ec,#86b6ef,#9ec5f4,#b7d3f6,#cde2fb;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+  --focus: #3987e5; --compare: #d95926; --peer: #6b6a64;
+  --correct: #199e70; --wrong: #e66767; --abstain: #4a4945;
+  --seq: #0d366b,#104281,#184f95,#1c5cab,#256abf,#2a78d6,#3987e5,#5598e7,#6da7ec,#86b6ef,#9ec5f4,#b7d3f6,#cde2fb;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 40px 20px 80px; }
+header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0 0 6px; font-weight: 650; letter-spacing: -0.01em; }
+h2 { font-size: 20px; margin: 48px 0 6px; font-weight: 620; }
+h3 { font-size: 15px; margin: 0 0 2px; font-weight: 600; }
+p { margin: 8px 0; max-width: 74ch; }
+.sub { color: var(--ink-2); }
+.small { font-size: 13px; color: var(--ink-2); }
+button { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 5px 11px; cursor: pointer; }
+button:hover { background: color-mix(in srgb, var(--surface), var(--ink) 5%); }
+button[aria-pressed="true"] { border-color: var(--ink-2); font-weight: 600; }
+.controls { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 0; margin: 20px 0 4px; background: var(--page); border-bottom: 1px solid var(--grid); }
+.controls .label { color: var(--ink-2); font-size: 13px; margin-right: 4px; }
+.key { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 24px 0 8px; }
+.tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 14px 16px; }
+.tile .v { font-size: 34px; font-weight: 620; line-height: 1.1; margin: 4px 0; }
+.tile .l { font-size: 13px; color: var(--ink-2); }
+.tile .d { font-size: 13px; color: var(--ink-2); }
+figure { margin: 16px 0; background: var(--surface); border: 1px solid var(--ring); border-radius: 14px; padding: 18px 18px 10px; }
+figure .head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+figcaption { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--ink-2); font-size: 12px; }
+svg .ink { fill: var(--ink); }
+svg .muted { fill: var(--muted); }
+svg .strong { fill: var(--ink); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--ink-2); margin: 8px 0 2px; }
+details { margin: 6px 0 4px; }
+summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
+table { border-collapse: collapse; font-size: 13px; margin: 8px 0; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--grid); }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 600; color: var(--ink-2); }
+.tip { position: fixed; pointer-events: none; z-index: 20; background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 7px 10px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: none; max-width: 320px; }
+.tip b { display: block; font-size: 15px; color: var(--ink); }
+.tip span { color: var(--ink-2); }
+.hit { fill: transparent; cursor: default; }
+.hit:focus { outline: none; }
+.hit:focus-visible { stroke: var(--ink-2); stroke-width: 1; }
+ul.notes { padding-left: 18px; max-width: 74ch; }
+ul.notes li { margin: 4px 0; }
+code { font-size: 13px; background: color-mix(in srgb, var(--surface), var(--ink) 6%); padding: 1px 5px; border-radius: 5px; }
+pre code { background: none; padding: 0; }
+pre { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 13px; }
+/* export mode: one chart per image, for sharing */
+.export main { display: none; }
+#export { display: none; width: 1200px; padding: 44px 48px 30px; background: var(--surface); }
+.export #export { display: block; }
+.export body, body.export { background: var(--surface); }
+#export h1 { font-size: 32px; max-width: 30ch; margin-bottom: 10px; }
+#export .sub { font-size: 19px; max-width: 70ch; margin: 0 0 6px; color: var(--ink-2); }
+#export .how { font-size: 16px; color: var(--ink-2); margin: 14px 0 0; max-width: 90ch; }
+#export .legend { font-size: 16px; margin: 14px 0 6px; }
+#export .legend .key { width: 13px; height: 13px; }
+#export svg text { font-size: 14px; }
+#export footer { margin-top: 22px; padding-top: 12px; border-top: 1px solid var(--grid); font-size: 14px; color: var(--muted); }
+@media print { .controls, details summary, #theme { display: none; } details { display: block; } }
+</style>
+</head>
+<body>
+<main>
+<header class="top">
+  <div>
+    <h1>Mimir 1B: safety and hallucination</h1>
+    <p class="sub" id="lede"></p>
+  </div>
+  <button id="theme" title="Switch light and dark mode">Dark mode</button>
+</header>
+
+<div class="tiles" id="tiles"></div>
+
+<div class="controls" role="group" aria-label="Compare Mimir with">
+  <span class="label"><span class="key" style="background:var(--focus)"></span>Mimir, compared with</span>
+  <span id="chips"></span>
+</div>
+
+<section>
+  <h2>Safety and helpfulness</h2>
+  <p id="txt-tradeoff"></p>
+  <figure>
+    <div class="head"><h3>Refusing harm without refusing everything</h3></div>
+    <figcaption>Each dot is one model. Horizontal: mean share of harmful requests answered safely (8 benchmarks). Vertical: mean share of safe requests answered (3 benchmarks). Top right is best.</figcaption>
+    <div id="c-scatter"></div>
+    <details><summary>Table</summary><div id="t-scatter"></div></details>
+  </figure>
+</section>
+
+<section>
+  <h2>Every safety benchmark</h2>
+  <p id="txt-safety"></p>
+  <figure>
+    <div class="head"><h3>Safety benchmarks, mean of 3 sampled runs</h3></div>
+    <div class="legend" id="l-safety"></div>
+    <div id="c-safety"></div>
+    <details><summary>Table</summary><div id="t-safety"></div></details>
+  </figure>
+</section>
+
+<section>
+  <h2>Where the refusals fail</h2>
+  <p id="txt-sorry"></p>
+  <figure>
+    <div class="head"><h3>SORRY-Bench: share of unsafe requests fulfilled, per category</h3></div>
+    <figcaption>Darker means the model helps more often with the unsafe request. 10 prompts per category, 3 runs.</figcaption>
+    <div id="c-sorry"></div>
+    <details><summary>Table</summary><div id="t-sorry"></div></details>
+  </figure>
+</section>
+
+<section>
+  <h2>Hallucination</h2>
+  <p id="txt-simpleqa"></p>
+  <figure>
+    <div class="head"><h3>SimpleQA Verified: 1,000 hard fact questions</h3></div>
+    <div class="legend" id="l-simpleqa"></div>
+    <div id="c-simpleqa"></div>
+    <details><summary>Table</summary><div id="t-simpleqa"></div></details>
+  </figure>
+  <p id="txt-fact"></p>
+  <figure>
+    <div class="head"><h3>Truthfulness and hallucination benchmarks</h3></div>
+    <div class="legend" id="l-fact"></div>
+    <div id="c-fact"></div>
+    <details><summary>Table</summary><div id="t-fact"></div></details>
+  </figure>
+</section>
+
+<section id="s-agree">
+  <h2>Can we trust the judges?</h2>
+  <p id="txt-agree"></p>
+  <figure>
+    <div class="head"><h3>Agreement between the two judge models</h3></div>
+    <figcaption>Cohen's kappa: 0 is chance agreement, 1 is full agreement. Items pooled over the five models.</figcaption>
+    <div id="c-agree"></div>
+    <details><summary>Table</summary><div id="t-agree"></div></details>
+  </figure>
+</section>
+
+<section>
+  <h2>How we measured</h2>
+  <ul class="notes" id="notes"></ul>
+  <h3 style="margin-top:20px">Evaluate a new Mimir version</h3>
+  <pre><code>bash scripts/evaluate_model.sh --repo danish-foundation-models/DFM-Mimir --revision &lt;commit&gt; --key mimir_v2
+python -m mimireval.report</code></pre>
+</section>
+</main>
+<div id="export"></div>
+<div class="tip" id="tip" role="status"></div>
+
+<script>
+const DATA = /*DATA*/null;
+const TEXT = /*TEXT*/{};
+const NS = "http://www.w3.org/2000/svg";
+const M = Object.fromEntries([...DATA.models, ...DATA.variants].map(m => [m.key, m]));
+const VARIANT = new Set(DATA.variants.map(v => v.key));
+const FOCUS = DATA.focus;
+const PEERS = DATA.models.map(m => m.key).filter(k => k !== FOCUS);
+let compare = new URLSearchParams(location.search).get("compare") ?? "hrm_text";
+const pct = (v, d = 0) => v == null ? "n/a" : `${(100 * v).toFixed(d)}%`;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function txt(parent, x, y, s, attrs = {}) {
+  const { "font-size": size, "font-weight": weight, style = "", ...rest } = attrs;  // inline style beats the stylesheet
+  const t = el("text", { x, y, ...rest, style: `${size ? `font-size:${size}px;` : ""}${weight ? `font-weight:${weight};` : ""}${style}` }, parent);
+  t.textContent = s;
+  return t;
+}
+function svg(host, w, h) {
+  const s = el("svg", { viewBox: `0 0 ${w} ${h}`, role: "img" });
+  host.replaceChildren(s);
+  return s;
+}
+function role(k) { return k === FOCUS ? "focus" : VARIANT.has(k) ? "variant" : k === compare ? "compare" : "peer"; }
+const COLOR = { focus: "var(--focus)", variant: "var(--focus)", compare: "var(--compare)", peer: "var(--peer)" };
+const RADIUS = { focus: 6, variant: 5, compare: 5.5, peer: 4.5 };
+const RANK = { peer: 0, compare: 1, variant: 2, focus: 3 };
+const order = keys => [...keys].sort((a, b) => RANK[role(a)] - RANK[role(b)]);
+
+// tooltip: values lead, labels follow
+const tip = document.getElementById("tip");
+function hover(node, rows) {
+  node.setAttribute("tabindex", 0);
+  const show = ev => {
+    tip.replaceChildren();
+    for (const [strong, weak] of rows()) {
+      const b = document.createElement("b"); b.textContent = strong;
+      const s = document.createElement("span"); s.textContent = weak;
+      tip.append(b, s);
+    }
+    tip.style.display = "block";
+    const r = ev.clientX != null ? { x: ev.clientX, y: ev.clientY } : (() => { const b = node.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y }; })();
+    const w = tip.offsetWidth;
+    tip.style.left = `${Math.min(r.x + 14, innerWidth - w - 8)}px`;
+    tip.style.top = `${r.y + 14}px`;
+  };
+  node.addEventListener("pointermove", show);
+  node.addEventListener("focus", show);
+  node.addEventListener("pointerleave", () => tip.style.display = "none");
+  node.addEventListener("blur", () => tip.style.display = "none");
+}
+function dot(g, x, y, k, extra = {}) {
+  const r = RADIUS[role(k)];
+  if (role(k) === "variant")  // hollow: the same model under a different setting
+    return el("circle", { cx: x, cy: y, r, fill: "var(--surface)", stroke: "var(--focus)", "stroke-width": 2, ...extra }, g);
+  return el("circle", { cx: x, cy: y, r, fill: COLOR[role(k)], stroke: "var(--surface)", "stroke-width": 2, ...extra }, g);
+}
+function table(host, head, rows) {
+  const t = document.createElement("table");
+  const tr = t.insertRow();
+  head.forEach(h => { const th = document.createElement("th"); th.textContent = h; tr.appendChild(th); });
+  rows.forEach(r => { const row = t.insertRow(); r.forEach(c => { row.insertCell().textContent = c; }); });
+  document.getElementById(host).replaceChildren(t);
+}
+function legend(host, items) {
+  const h = document.getElementById(host); h.replaceChildren();
+  items.forEach(([color, label, shape]) => {
+    const s = document.createElement("span");
+    const k = document.createElement("span"); k.className = "key"; k.style.background = color;
+    if (shape === "rect") k.style.borderRadius = "2px";
+    s.append(k, document.createTextNode(label)); h.appendChild(s);
+  });
+}
+const modelLegend = (host, rows = []) => {
+  legend(host, [["var(--focus)", M[FOCUS].label], ...(compare ? [["var(--compare)", M[compare].label]] : []),
+    ["var(--peer)", "other models (hover for names)"]]);
+  const vs = DATA.variants.filter(v => rows.some(r => r.values[v.key]));
+  for (const v of vs) {
+    const sp = document.createElement("span"), k = document.createElement("span");
+    k.className = "key"; k.style.background = "var(--surface)"; k.style.border = "2px solid var(--focus)"; k.style.width = k.style.height = "11px";
+    sp.append(k, document.createTextNode(`${v.label} (room to finish its reasoning)`)); document.getElementById(host).appendChild(sp);
+  }
+};
+
+// summary numbers
+const groupMean = (rows, group, k) => {
+  const v = rows.filter(r => r.group === group).map(r => r.values[k]?.mean).filter(v => v != null);
+  return v.length ? v.reduce((a, b) => a + b) / v.length : null;
+};
+const harm = k => groupMean(DATA.safety, "harmful", k);
+const benign = k => groupMean(DATA.safety, "benign", k);
+const rank = (f, k) => 1 + DATA.models.filter(m => f(m.key) > f(k)).length;
+const factRow = id => DATA.fact.find(r => r.id === id);
+const safetyRow = id => DATA.safety.find(r => r.id === id);
+
+function tiles() {
+  const h = document.getElementById("tiles"); h.replaceChildren();
+  const add = (v, l, d) => {
+    const t = document.createElement("div"); t.className = "tile";
+    for (const [cls, s] of [["l", l], ["v", v], ["d", d]]) { const e = document.createElement("div"); e.className = cls; e.textContent = s; t.appendChild(e); }
+    h.appendChild(t);
+  };
+  const n = DATA.models.length;
+  add(pct(harm(FOCUS)), "Harmful requests answered safely", `rank ${rank(harm, FOCUS)} of ${n} models, mean of 8 benchmarks`);
+  add(pct(benign(FOCUS)), "Safe requests answered", `rank ${rank(benign, FOCUS)} of ${n}, mean of 3 benchmarks`);
+  const sq = DATA.simpleqa[FOCUS];
+  if (sq) add(pct(sq.correct, 1), "SimpleQA Verified correct", `${pct(sq.not_attempted, 1)} not attempted`);
+  const hh = factRow("hhem_halu")?.values[FOCUS];
+  if (hh) add(pct(hh.mean, 1), "Summaries with hallucination", "HHEM-2.1-Open on 953 news articles");
+}
+
+function chips() {
+  const h = document.getElementById("chips"); h.replaceChildren();
+  [...PEERS, null].forEach(k => {
+    const b = document.createElement("button");
+    b.textContent = k ? M[k].label : "none";
+    b.setAttribute("aria-pressed", String(compare === k));
+    if (k) { const s = document.createElement("span"); s.className = "key"; s.style.background = compare === k ? "var(--compare)" : "var(--peer)"; b.prepend(s); }
+    b.onclick = () => { compare = k; render(); };
+    h.append(b, " ");
+  });
+}
+
+function scatter() {
+  const W = 900, H = 420, L = 60, R = 30, T = 20, B = 50;
+  const pts = DATA.models.map(m => ({ k: m.key, x: harm(m.key), y: benign(m.key) })).filter(p => p.x != null && p.y != null);
+  const lo = v => Math.max(0, Math.floor((Math.min(...v) - 0.05) * 10) / 10);
+  const x0 = lo(pts.map(p => p.x)), y0 = lo(pts.map(p => p.y));
+  const sx = v => L + (v - x0) / (1 - x0) * (W - L - R), sy = v => H - B - (v - y0) / (1 - y0) * (H - T - B);
+  const s = svg(document.getElementById("c-scatter"), W, H);
+  for (let v = x0; v <= 1.0001; v += 0.1) {
+    el("line", { x1: sx(v), x2: sx(v), y1: T, y2: H - B, stroke: "var(--grid)" }, s);
+    txt(s, sx(v), H - B + 18, pct(v), { "text-anchor": "middle" });
+  }
+  for (let v = y0; v <= 1.0001; v += 0.1) {
+    el("line", { x1: L, x2: W - R, y1: sy(v), y2: sy(v), stroke: "var(--grid)" }, s);
+    txt(s, L - 8, sy(v) + 4, pct(v), { "text-anchor": "end" });
+  }
+  txt(s, W - R, H - 8, "harmful requests answered safely →", { "text-anchor": "end", class: "muted" });
+  txt(s, L, T - 6, "↑ safe requests answered", { class: "muted" });
+  const g = el("g", {}, s);
+  const top = f => { const r = v => Math.round(100 * v), b = Math.max(...pts.map(p => r(f(p)))); return pts.filter(p => r(f(p)) === b).map(p => p.k); };
+  const bestX = top(p => p.x), bestY = top(p => p.y);
+  order(pts.map(p => p.k)).forEach(k => {
+    const p = pts.find(q => q.k === k), x = sx(p.x), y = sy(p.y);
+    dot(g, x, y, k, { r: RADIUS[role(k)] + 1.5 });
+    const right = x < W - 170;
+    txt(g, x + (right ? 12 : -12), y + 4, M[k].label, { "text-anchor": right ? "start" : "end", class: role(k) === "peer" ? "" : "strong" });
+    const tags = [...(bestX.includes(k) ? ["best on harmful requests"] : []), ...(bestY.includes(k) ? ["best on safe requests"] : [])];
+    tags.forEach((tag, i) => pill(g, x + (right ? 12 : -12), y + 22 + i * 22, tag, right ? "start" : "end"));
+    const hit = el("circle", { cx: x, cy: y, r: 16, class: "hit" }, g);
+    hover(hit, () => [[`${pct(p.x)} safe on harmful`, M[k].label], [`${pct(p.y)} answered when safe`, ""]]);
+  });
+  table("t-scatter", ["Model", "Harmful answered safely", "Safe answered"], pts.map(p => [M[p.k].label, pct(p.x, 1), pct(p.y, 1)]));
+}
+
+// one row per benchmark, one dot per model on a shared axis
+function strip(host, rows, groups) {
+  const W = 900, L = 250, R = 70, rowH = 30, gapH = 34;
+  const height = rows.length * rowH + Object.keys(groups).length * gapH + 30;
+  const s = svg(document.getElementById(host), W, height);
+  let y = 0;
+  for (const [gid, gname] of Object.entries(groups)) {
+    const rs = rows.filter(r => r.group === gid);
+    if (!rs.length) continue;
+    y += gapH;
+    txt(s, 0, y - 10, gname, { class: "strong" });
+    for (const r of rs) {
+      const sx = v => L + v * (W - L - R);
+      const cy = y + rowH / 2;
+      txt(s, 0, cy + 4, r.label, { class: "ink" });
+      const hint = { high: "↑", low: "↓", mid50: "50% best", none: "" }[r.better];
+      if (hint) txt(s, L - 12, cy + 4, hint, { "text-anchor": "end", class: "muted" });
+      el("line", { x1: sx(0), x2: sx(1), y1: cy, y2: cy, stroke: "var(--grid)" }, s);
+      if (r.better === "mid50") el("line", { x1: sx(0.5), x2: sx(0.5), y1: cy - 9, y2: cy + 9, stroke: "var(--axis)" }, s);
+      const g = el("g", {}, s);
+      order(Object.keys(r.values)).forEach(k => {
+        const v = r.values[k];
+        if (!v) return;
+        const x = sx(v.mean);
+        if (role(k) !== "peer" && v.sd > 0) el("line", { x1: sx(v.mean - v.sd), x2: sx(v.mean + v.sd), y1: cy, y2: cy, stroke: COLOR[role(k)], "stroke-width": 2, "stroke-linecap": "round", opacity: 0.45 }, g);
+        dot(g, x, cy, k);
+        const hit = el("circle", { cx: x, cy, r: 12, class: "hit" }, g);
+        hover(hit, () => [[`${pct(v.mean, 1)}${v.n > 1 ? ` ± ${pct(v.sd, 1)}` : ""}`, M[k].label],
+                          [r.label, `${r.note}${v.n > 1 ? `; ${v.n} runs` : ""}`]]);
+      });
+      const f = r.values[FOCUS];
+      if (f) txt(s, W - R + 10, cy + 4, pct(f.mean), { class: "strong" });
+      y += rowH;
+    }
+  }
+  // axis ticks under the last row
+  const sx = v => L + v * (W - L - R);
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => txt(s, sx(v), y + 18, pct(v), { "text-anchor": "middle", class: "muted" }));
+  const names = DATA.models.map(m => m.key);
+  table(host.replace("c-", "t-"), ["Benchmark", ...names.map(k => M[k].label)],
+    rows.map(r => [r.label, ...names.map(k => r.values[k] ? pct(r.values[k].mean, 1) + (r.values[k].n > 1 ? ` ± ${pct(r.values[k].sd, 1)}` : "") : "n/a")]));
+}
+
+function seqColor(v) {
+  const ramp = css("--seq").split(",").map(c => c.trim());
+  const i = Math.min(ramp.length - 1, Math.max(0, Math.round(v * (ramp.length - 1))));
+  return ramp[i];
+}
+function heatmap() {
+  const { categories, values } = DATA.sorry;
+  if (!categories.length) return;
+  const keys = order(DATA.models.map(m => m.key).filter(k => values[k])).reverse();
+  const W = 900, L = 330, top = 36, cell = 15, colW = (W - L) / keys.length;
+  const meanH = 40, s = svg(document.getElementById("c-sorry"), W, top + categories.length * (cell + 2) + meanH + 44);
+  keys.forEach((k, j) => {
+    const x = L + j * colW + colW / 2;
+    txt(s, x, top - 12, M[k].label, { "text-anchor": "middle", class: role(k) === "peer" ? "" : "strong" });
+    if (role(k) !== "peer") el("circle", { cx: x - M[k].label.length * 3.4 - 10, cy: top - 16, r: 4, fill: COLOR[role(k)] }, s);
+  });
+  categories.forEach((c, i) => {
+    const y = top + i * (cell + 2);
+    const label = c.length > 50 ? c.slice(0, 48) + "…" : c;
+    txt(s, L - 10, y + cell - 3, label, { "text-anchor": "end", class: "ink" }).appendChild(el("title")).textContent = c;
+    keys.forEach((k, j) => {
+      const v = values[k][i];
+      const r = el("rect", { x: L + j * colW + 1, y, width: colW - 2, height: cell, rx: 3, fill: seqColor(v) }, s);
+      hover(r, () => [[`${pct(v)} fulfilled`, M[k].label], [c, ""]]);
+    });
+  });
+  // mean row: the winner is the model that fulfills the fewest unsafe requests
+  const my = top + categories.length * (cell + 2) + 6;
+  const means = Object.fromEntries(keys.map(k => [k, values[k].reduce((a, b) => a + b) / values[k].length]));
+  const lowest = Math.min(...keys.map(k => Math.round(100 * means[k])));
+  txt(s, L - 10, my + 18, "mean over all topics (lower is safer)", { "text-anchor": "end", class: "strong" });
+  keys.forEach((k, j) => {
+    const isBest = Math.round(100 * means[k]) === lowest;
+    if (isBest) bestTag(s, L + j * colW + 3, my - 2, colW - 6, meanH - 6);
+    txt(s, L + j * colW + colW / 2, my + 23, isBest ? `★ ${pct(means[k])}` : pct(means[k]), { "text-anchor": "middle", class: "strong", "font-size": 15 });
+  });
+  // scale legend
+  const ly = my + meanH + 4;
+  txt(s, L - 10, ly + 10, "fulfilled", { "text-anchor": "end", class: "muted" });
+  [0, 0.25, 0.5, 0.75, 1].forEach((v, i) => {
+    el("rect", { x: L + i * 60, y: ly, width: 58, height: 12, rx: 2, fill: seqColor(v) }, s);
+    txt(s, L + i * 60 + 29, ly + 28, pct(v), { "text-anchor": "middle", class: "muted" });
+  });
+  table("t-sorry", ["Category", ...keys.map(k => M[k].label)], categories.map((c, i) => [c, ...keys.map(k => pct(values[k][i]))]));
+}
+
+function simpleqaBars() {
+  const keys = order([...DATA.models, ...DATA.variants].map(m => m.key).filter(k => DATA.simpleqa[k])).reverse();
+  if (!keys.length) return;
+  const W = 900, L = 140, R = 330, bar = 20, rowH = 36;
+  const s = svg(document.getElementById("c-simpleqa"), W, keys.length * rowH + 30);
+  const round = v => Math.round(1000 * v);
+  const ranked = keys.filter(k => !VARIANT.has(k));
+  const mostCorrect = Math.max(...ranked.map(k => round(DATA.simpleqa[k].correct)));
+  const fewestWrong = Math.min(...ranked.map(k => round(DATA.simpleqa[k].incorrect)));
+  const sx = v => v * (W - L - R);
+  legend("l-simpleqa", [["var(--correct)", "correct", "rect"], ["var(--wrong)", "incorrect", "rect"], ["var(--abstain)", "not attempted", "rect"]]);
+  keys.forEach((k, i) => {
+    const r = DATA.simpleqa[k], y = i * rowH + 6;
+    txt(s, L - 12, y + bar / 2 + 4, M[k].label, { "text-anchor": "end", class: role(k) === "peer" ? "ink" : "strong" });
+    if (role(k) !== "peer") dot(s, 8, y + bar / 2, k);
+    let x = L;
+    [["correct", "var(--correct)"], ["incorrect", "var(--wrong)"], ["not_attempted", "var(--abstain)"]].forEach(([part, color], j, arr) => {
+      const w = Math.max(0, sx(r[part]) - (j < arr.length - 1 ? 2 : 0));
+      const last = j === arr.length - 1, first = j === 0;
+      const rect = el("rect", { x, y, width: Math.max(w, 1), height: bar, fill: color, rx: (first || last) ? 4 : 0 }, s);
+      hover(rect, () => [[pct(r[part], 1), M[k].label], [part.replace("_", " "), ""]]);
+      x += w + 2;
+    });
+    txt(s, W - R + 12, y + bar / 2 + 4, `${pct(r.correct, 1)} correct · ${pct(r.incorrect, 1)} wrong`, { class: role(k) === "peer" ? "" : "strong" });
+    if (!VARIANT.has(k)) {
+      let px = W;
+      if (round(r.incorrect) === fewestWrong) px -= pill(s, px, y + bar / 2, "fewest wrong", "end") + 6;
+      if (round(r.correct) === mostCorrect) pill(s, px, y + bar / 2, "most correct", "end");
+    }
+  });
+  table("t-simpleqa", ["Model", "Correct", "Incorrect", "Not attempted", "Correct given attempted", "F1"],
+    keys.map(k => { const r = DATA.simpleqa[k]; return [M[k].label, pct(r.correct, 1), pct(r.incorrect, 1), pct(r.not_attempted, 1), pct(r.acc_given_attempted, 1), pct(r.f1, 1)]; }));
+}
+
+function agreementBars() {
+  const rows = DATA.agreement;
+  if (!rows.length) { document.getElementById("s-agree").hidden = true; return; }
+  const W = 900, L = 220, R = 230, bar = 18, rowH = 32;
+  const s = svg(document.getElementById("c-agree"), W, rows.length * rowH + 30);
+  const sx = v => Math.max(0, v) * (W - L - R);
+  rows.forEach((r, i) => {
+    const y = i * rowH + 4;
+    txt(s, L - 12, y + bar / 2 + 4, r.label, { "text-anchor": "end", class: "ink" });
+    const rect = el("rect", { x: L, y, width: Math.max(sx(r.kappa), 2), height: bar, rx: 4, fill: "var(--ink-2)", opacity: 0.55 }, s);
+    hover(rect, () => [[`κ = ${r.kappa.toFixed(2)}`, r.label], [`${pct(r.agree, 1)} same label`, `${r.n.toLocaleString()} items`]]);
+    const label = txt(s, L + sx(r.kappa) + 8, y + bar / 2 + 4, `κ ${r.kappa.toFixed(2)}`, { class: "strong" });
+    txt(s, L + sx(r.kappa) + 16 + label.getComputedTextLength(), y + bar / 2 + 4, `· ${pct(r.agree)} same verdict`, { class: "muted" });
+  });
+  [0, 0.2, 0.4, 0.6, 0.8, 1].forEach(v => txt(s, L + sx(v), rows.length * rowH + 22, v.toFixed(1), { "text-anchor": "middle", class: "muted" }));
+  table("t-agree", ["Label", "Items", "Same label", "Cohen's kappa"], rows.map(r => [r.label, r.n.toLocaleString(), pct(r.agree, 1), r.kappa.toFixed(2)]));
+}
+
+function prose() {
+  for (const [id, html] of Object.entries(TEXT)) {
+    const e = document.getElementById(id);
+    if (!e) continue;
+    if (id === "notes") { e.replaceChildren(...html.map(s => { const li = document.createElement("li"); li.textContent = s; return li; })); }
+    else e.textContent = html;
+  }
+}
+
+function render() {
+  tiles(); chips(); scatter();
+  strip("c-safety", DATA.safety, SAFETY_GROUPS);
+  modelLegend("l-safety");
+  heatmap(); simpleqaBars();
+  strip("c-fact", DATA.fact, FACT_GROUPS);
+  modelLegend("l-fact", DATA.fact);
+  agreementBars();
+}
+
+// scorecard: numbers for every model, a small bar per cell, the winner of each row framed
+const winners = r => {
+  const round = v => Math.round(100 * v);
+  const score = v => v == null ? -Infinity : r.better === "low" ? -round(v) : r.better === "mid50" ? -Math.abs(round(v) - 50) : round(v);
+  if (r.better === "none") return [];
+  const keys = Object.keys(r.values).filter(k => r.values[k] && !VARIANT.has(k));
+  const best = Math.max(...keys.map(k => score(r.values[k].mean)));
+  return keys.filter(k => score(r.values[k].mean) === best);
+};
+function pill(s, x, cy, label, anchor = "start") {
+  const t = txt(s, 0, cy + 4, label, { "text-anchor": "middle", "font-size": 12, "font-weight": 600, style: "fill: var(--surface)" });
+  const w = t.getComputedTextLength() + 18, x0 = anchor === "end" ? x - w : x;
+  t.setAttribute("x", x0 + w / 2);
+  const r = el("rect", { x: x0, y: cy - 10, width: w, height: 20, rx: 10, fill: "var(--ink)" });
+  s.insertBefore(r, t);
+  return w;
+}
+function bestTag(s, x, y, w, h) {
+  el("rect", { x, y, width: w, height: h, rx: 8, fill: "var(--ink)", "fill-opacity": 0.04, stroke: "var(--ink-2)", "stroke-width": 1.5 }, s);
+}
+function scorecard(host, rows, groups) {
+  const vs = DATA.variants.map(v => v.key).filter(k => rows.some(r => r.values[k]));
+  const keys = [FOCUS, ...vs, ...PEERS];
+  const W = 1100, L = 470, colW = (W - L) / keys.length, rowH = 52, groupH = 46, headH = 40, winsH = 60;
+  const rowsShown = rows.filter(r => keys.some(k => r.values[k]));
+  const nGroups = Object.keys(groups).filter(g => rowsShown.some(r => r.group === g)).length;
+  const H = headH + rowsShown.length * rowH + nGroups * groupH + winsH;
+  const s = svg(document.getElementById(host), W, H);
+  el("rect", { x: L + 2, y: 0, width: colW - 4, height: H, rx: 10, fill: "var(--focus)", opacity: 0.08 }, s);
+  if (vs.length) el("rect", { x: L + colW + 2, y: 0, width: colW * vs.length - 4, height: H, rx: 10, fill: "var(--focus)", opacity: 0.04 }, s);
+  keys.forEach((k, j) => {
+    const words = VARIANT.has(k) ? [M[k].label, "more room"] : [M[k].label];
+    words.forEach((w, i) => txt(s, L + j * colW + colW / 2, 26 + (i - (words.length - 1)) * 15, w,
+      { "text-anchor": "middle", class: k === FOCUS ? "strong" : "ink", "font-size": VARIANT.has(k) ? 12.5 : 15 }));
+  });
+  const wins = Object.fromEntries(keys.map(k => [k, 0]));
+  let y = headH, contests = 0;
+  for (const [gid, gname] of Object.entries(groups)) {
+    const rs = rowsShown.filter(r => r.group === gid);
+    if (!rs.length) continue;
+    txt(s, 0, y + 32, gname, { class: "strong", "font-size": 16 });
+    el("line", { x1: 0, x2: W, y1: y + groupH - 4, y2: y + groupH - 4, stroke: "var(--grid)" }, s);
+    y += groupH;
+    for (const r of rs) {
+      txt(s, 0, y + 22, r.label, { class: "ink", "font-size": 15 });
+      const win = winners(r);
+      txt(s, 0, y + 41, win.length ? r.note : `${r.note} (no winner)`, { class: "muted", "font-size": 12.5 });
+      if (win.length) contests++;
+      win.forEach(k => wins[k]++);
+      keys.forEach((k, j) => {
+        const v = r.values[k]?.mean;
+        if (v == null) return;
+        const cx = L + j * colW + colW / 2, bw = colW * 0.58, isBest = win.includes(k);
+        if (isBest) bestTag(s, L + j * colW + 6, y + 3, colW - 12, rowH - 6);
+        txt(s, cx, y + 26, isBest ? `★ ${pct(v)}` : pct(v), { "text-anchor": "middle", class: isBest ? "strong" : "ink", "font-size": isBest ? 17 : 16 });
+        el("rect", { x: cx - bw / 2, y: y + 35, width: bw, height: 6, rx: 3, fill: "var(--grid)" }, s);
+        el("rect", { x: cx - bw / 2, y: y + 35, width: Math.max(3, bw * Math.min(1, v)), height: 6, rx: 3, fill: k === FOCUS || VARIANT.has(k) ? "var(--focus)" : "var(--peer)", opacity: VARIANT.has(k) ? 0.5 : 1 }, s);
+      });
+      el("line", { x1: 0, x2: W, y1: y + rowH, y2: y + rowH, stroke: "var(--grid)", opacity: 0.6 }, s);
+      y += rowH;
+    }
+  }
+  txt(s, 0, y + 30, "Benchmarks won", { class: "strong", "font-size": 16 });
+  txt(s, 0, y + 49, `out of ${contests}; ties count for every tied model`, { class: "muted", "font-size": 12.5 });
+  keys.forEach((k, j) => txt(s, L + j * colW + colW / 2, y + 38, VARIANT.has(k) ? "–" : String(wins[k]), { "text-anchor": "middle", class: VARIANT.has(k) ? "muted" : "strong", "font-size": 22 }));
+}
+
+const SAFETY_GROUPS = { harmful: "Harmful requests: share answered safely (higher is better)", benign: "Safe requests: share answered (higher is better)", bias: "Toxicity and social bias", hazard: "Dangerous knowledge (a capability, not a safety score)" };
+const FACT_GROUPS = { truthfulqa: "TruthfulQA: common misconceptions (higher is better)", hallulens: "HalluLens: facts from Wikipedia", grounded: "Faithful summaries of news articles", bias: "Stereotypes" };
+
+function exportView(id) {
+  document.documentElement.classList.add("export");
+  compare = null;
+  const box = document.getElementById("export");
+  const t = (TEXT.export || {})[id] || {};
+  const add = (tag, cls, s) => { const e = document.createElement(tag); if (cls) e.className = cls; if (s) e.textContent = s; box.appendChild(e); return e; };
+  add("h1", "", t.title || id);
+  if (t.sub) add("p", "sub", t.sub);
+  const legendHost = add("div", "legend"); legendHost.id = `l-${id}`;
+  const chart = add("div"); chart.id = `c-${id}`;
+  const hidden = add("div"); hidden.id = `t-${id}`; hidden.hidden = true;
+  if (t.how) add("p", "how", t.how);
+  add("footer", "", TEXT.footer || "");
+  if (id === "scatter") { legendHost.remove(); scatter(); }
+  if (id === "safety") { legendHost.remove(); scorecard("c-safety", DATA.safety, SAFETY_GROUPS); }
+  if (id === "fact") { legendHost.remove(); scorecard("c-fact", DATA.fact, FACT_GROUPS); }
+  if (id === "sorry") { legendHost.remove(); heatmap(); }
+  if (id === "simpleqa") simpleqaBars();
+  if (id === "agree") { legendHost.remove(); agreementBars(); }
+}
+
+const themeBtn = document.getElementById("theme");
+const isDark = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+const syncTheme = () => themeBtn.textContent = isDark() ? "Light mode" : "Dark mode";
+themeBtn.onclick = () => { document.documentElement.dataset.theme = isDark() ? "light" : "dark"; syncTheme(); render(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { syncTheme(); render(); });
+const EXPORT = new URLSearchParams(location.search).get("export");
+const THEME = new URLSearchParams(location.search).get("theme");
+if (THEME) document.documentElement.dataset.theme = THEME;
+if (EXPORT) { document.querySelector("main").remove(); exportView(EXPORT); }
+else { syncTheme(); prose(); render(); }
+</script>
+</body>
+</html>
