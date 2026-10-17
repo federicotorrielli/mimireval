@@ -181,36 +181,50 @@ def agreement() -> list[dict]:
     return rows
 
 
-EXAMPLE = 133  # TruthfulQA question shown in full; built once, then read from report/example.json
+# Hand-picked items shown in full; built once from the raw answers, then read from report/examples.json.
+EXAMPLES = {"truthfulqa": 133, "jailbreak": 136}
 
 
 def _short(text: str, min_len: int = 80) -> str:
     """Opening sentences of a free answer (at least min_len characters), without markdown."""
     text = " ".join(re.sub(r"[*#`]", "", text).split())
-    end = next((m.end() for m in re.finditer(r"[.!?](?= |$)", text) if m.end() >= min_len), len(text))
-    return text[:end] + (" …" if end < len(text) else "")
+    end = next((m.end() for m in re.finditer(r"(?<=[a-z0-9)\]])[.!?](?= |$)", text) if m.end() >= min_len), len(text))
+    return text[:end] + ("\u00a0…" if end < len(text) else "")
 
 
-def example() -> dict:
-    """One TruthfulQA question with every model's free answer and both raters' labels."""
-    path = REPORT_DIR / "example.json"
-    if path.exists():
-        return json.loads(path.read_text())
+def _rows(path: Path) -> list[dict]:
+    return [json.loads(line) for line in path.open()]
 
-    def rows(p):
-        return [json.loads(line) for line in p.open()]
-    gen = {m: rows(GEN_DIR / m / "truthfulqa_gen" / "seed0.jsonl") for m in MODELS}
-    grades = {m: [[r["grade"] for r in rows(SCORE_DIR / m / "truthfulqa_gen" / f"seed0{s}.items.jsonl")]
-                  for s in ("", SECOND)] for m in MODELS}
-    truthful = lambda m, i: all(g[i]["truthful"] for g in grades[m])
-    false = lambda m, i: not any(g[i]["truthful"] for g in grades[m])
-    others = [m for m in MODELS if m != "mimir"]
-    pool = sum(truthful("mimir", i) and all(false(m, i) for m in others) for i in range(len(gen["mimir"])))
-    item = gen["mimir"][EXAMPLE]
-    out = {"question": item["question"], "reference": item["best_answer"], "pool": pool, "total": len(gen["mimir"]),
-           "answers": {m: {"text": _short(gen[m][EXAMPLE]["completion"]), "truthful": truthful(m, EXAMPLE)} for m in MODELS}}
-    path.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n")
-    return out
+
+def _truthfulqa_example(i: int) -> dict:
+    gen = {m: _rows(GEN_DIR / m / "truthfulqa_gen" / "seed0.jsonl") for m in MODELS}
+    grades = {m: [_rows(SCORE_DIR / m / "truthfulqa_gen" / f"seed0{s}.items.jsonl") for s in ("", SECOND)] for m in MODELS}
+    true = lambda m, j: all(g[j]["grade"]["truthful"] for g in grades[m])
+    false = lambda m, j: not any(g[j]["grade"]["truthful"] for g in grades[m])
+    pool = sum(true("mimir", j) and all(false(m, j) for m in MODELS if m != "mimir") for j in range(len(gen["mimir"])))
+    return {"question": gen["mimir"][i]["question"], "reference": gen["mimir"][i]["best_answer"],
+            "pool": pool, "total": len(gen["mimir"]),
+            "answers": {m: {"text": _short(gen[m][i]["completion"]), "ok": true(m, i), "label": "true" if true(m, i) else "false"}
+                        for m in MODELS}}
+
+
+def _jailbreak_example(i: int) -> dict:
+    items = {m: _rows(SCORE_DIR / m / "wildjailbreak_harmful" / "seed0.items.jsonl") for m in MODELS}
+    safe = lambda r: r["response_refusal"] == "refusal" and r["response_harmfulness"] == "unharmful"
+    harmful = lambda r: r["response_refusal"] == "compliance" and r["response_harmfulness"] == "harmful"
+    pool = sum(safe(items["mimir"][j]) and all(harmful(items[m][j]) for m in MODELS if m != "mimir")
+               for j in range(len(items["mimir"])))
+    return {"question": items["mimir"][i]["vanilla"], "pool": pool, "total": len(items["mimir"]),
+            "answers": {m: {"text": _short(r["original_model_response"], 60), "ok": safe(r), "label": "safe" if safe(r) else "harmful"}
+                        for m in MODELS for r in [items[m][i]]}}
+
+
+def examples() -> dict:
+    path = REPORT_DIR / "examples.json"
+    if not path.exists():
+        out = {"truthfulqa": _truthfulqa_example(EXAMPLES["truthfulqa"]), "jailbreak": _jailbreak_example(EXAMPLES["jailbreak"])}
+        path.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n")
+    return json.loads(path.read_text())
 
 
 def collect() -> dict:
@@ -223,12 +237,12 @@ def collect() -> dict:
         "sorry": sorry_categories(),
         "simpleqa": simpleqa(),
         "agreement": agreement(),
-        "example": example(),
+        "examples": examples(),
         "judges": {"primary": PRIMARY_JUDGE, "second": SECOND_JUDGE},
     }
 
 
-IMAGES = ("scatter", "safety", "sorry", "simpleqa", "fact", "agree", "example")
+IMAGES = ("scatter", "safety", "sorry", "simpleqa", "fact", "agree", "truthfulqa", "jailbreak")
 
 
 def images(page: Path, theme: str = "light"):

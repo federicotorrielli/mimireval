@@ -477,8 +477,8 @@ function simpleqaBars() {
     keys.map(k => { const r = DATA.simpleqa[k]; return [M[k].label, pct(r.correct, 1), pct(r.incorrect, 1), pct(r.not_attempted, 1), pct(r.acc_given_attempted, 1), pct(r.f1, 1)]; }));
 }
 
-function exampleCards() {
-  const ex = DATA.example, box = document.getElementById("c-example");
+function exampleCards(id) {
+  const ex = DATA.examples[id], box = document.getElementById(`c-${id}`);
   const list = document.createElement("div"); list.className = "answers";
   for (const k of [FOCUS, ...DATA.models.map(m => m.key).filter(k => k !== FOCUS)]) {
     const a = ex.answers[k], row = document.createElement("div");
@@ -486,13 +486,15 @@ function exampleCards() {
     const cell = (cls, s) => { const e = document.createElement("div"); e.className = cls; e.textContent = s; row.appendChild(e); };
     cell("who", M[k].label);
     cell("says", a.text);
-    cell(`label ${a.truthful}`, a.truthful ? "✓ true" : "✗ false");
+    cell(`label ${a.ok}`, `${a.ok ? "✓" : "✗"} ${a.label}`);
     list.appendChild(row);
   }
   box.appendChild(list);
-  const ref = document.createElement("p"); ref.className = "reference";
-  ref.textContent = `Reference answer: ${ex.reference}.`;
-  box.appendChild(ref);
+  if (ex.reference) {
+    const ref = document.createElement("p"); ref.className = "reference";
+    ref.textContent = `Reference answer: ${ex.reference}.`;
+    box.appendChild(ref);
+  }
 }
 
 function agreementBars() {
@@ -620,7 +622,7 @@ function exportView(id) {
   if (id === "sorry") { legendHost.remove(); heatmap(); }
   if (id === "simpleqa") simpleqaBars();
   if (id === "agree") { legendHost.remove(); agreementBars(); }
-  if (id === "example") { legendHost.remove(); exampleCards(); }
+  if (id === "truthfulqa" || id === "jailbreak") { legendHost.remove(); exampleCards(id); }
 }
 
 const themeBtn = document.getElementById("theme");
