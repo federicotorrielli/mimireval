@@ -1,59 +1,51 @@
 # mimireval
 
-Safety and hallucination evaluation of [DFM-Mimir](https://huggingface.co/danish-foundation-models/DFM-Mimir), next to four open models of about the same size (HRM-Text 1B, Qwen 3.5 0.8B, Gemma 3 1B, OLMo 2 1B).
-The results are in the six charts in `report/images/`.
-The model answers, the verdicts for each item and the HalluLens outputs are in the private dataset [EvilScript/mimireval-outputs](https://huggingface.co/datasets/EvilScript/mimireval-outputs).
+Safety and hallucination evals for [DFM-Mimir](https://huggingface.co/danish-foundation-models/DFM-Mimir), compared with HRM-Text 1B, Qwen 3.5 0.8B, Gemma 3 1B and OLMo 2 1B.
+Charts are in `report/images/`.
 
-## Benchmarks
+## What's in it
 
-| Area | Benchmarks | Evaluated with |
-|---|---|---|
-| Safety | Ai2 safety-eval (HarmBench, StrongREJECT, WildGuardTest, WildJailbreak, Do Anything Now, TrustLLM, XSTest, ToxiGen, BBQ, WMDP), SORRY-Bench, OR-Bench-Hard-1K | open classifiers (WildGuard, the SORRY-Bench and StrongREJECT classifiers) |
-| Hallucination | SimpleQA Verified, TruthfulQA (MC1/MC2 in English and Danish, generation), HalluLens (PreciseWikiQA, LongWiki, MixedEntities), Vectara summaries | DeepSeek-V4.1-Flash, plus GLM-5.3-Flash as second judging model; HHEM-2.1-Open for summaries |
-| Bias | CrowS-Pairs, BBQ | likelihood, exact answer |
+- Safety: the Ai2 safety-eval suite (HarmBench, StrongREJECT, WildGuardTest, WildJailbreak, DAN, TrustLLM, XSTest, ToxiGen, BBQ, WMDP), SORRY-Bench and OR-Bench-Hard-1K. Rated by WildGuard and the SORRY-Bench / StrongREJECT classifiers.
+- Hallucination: SimpleQA Verified, TruthfulQA (English and Danish MC, plus free answers), HalluLens (PreciseWikiQA, LongWiki, MixedEntities) and the Vectara summaries with HHEM-2.1-Open. DeepSeek-V4.1-Flash rates the free answers, and GLM-5.3-Flash rates them again to check agreement.
+- Bias: CrowS-Pairs and BBQ.
 
-Mimir and HRM-Text are prefix language models: attention over the prompt goes in both ways, but the model writes the answer from left to right.
-vLLM recomputes a preempted request as one block, and for these models this block would include the answer.
-Therefore `mimireval/generate.py` starts a request only if its full length fits the KV cache, and it fails if vLLM ever preempts.
+Mimir and HRM-Text are prefix LMs (the prompt is bidirectional). If vLLM preempts a request it recomputes prompt and answer together, which breaks these models. So `mimireval/generate.py` only starts a request when its whole length fits in the KV cache, and it crashes if a preemption still happens.
 
 ## Setup
 
-Needs a CUDA GPU (we used one B200), [uv](https://docs.astral.sh/uv/) and about 30 GB of disk for the Wikipedia database of LongWiki.
+You need a CUDA GPU (we used a B200), [uv](https://docs.astral.sh/uv/) and ~30 GB of disk for the LongWiki Wikipedia dump.
 
 ```bash
-cp .env.example .env    # fill in the API endpoint and a Hugging Face token
-bash scripts/setup.sh   # Python 3.14 env, benchmark code at pinned commits, data
+cp .env.example .env    # rater API endpoint + HF token
+bash scripts/setup.sh
 ```
 
-The judging models run through any OpenAI-compatible API. Their names are in `mimireval/models.py`.
+Any OpenAI-compatible API works for the raters, model names are in `mimireval/models.py`.
 
-## Evaluate a new Mimir version
+## Evaluating a new Mimir
 
-1. Add the model to `MODELS` in `mimireval/models.py`, with a fixed revision:
+Add it to `MODELS` in `mimireval/models.py`:
 
-   ```python
-   ModelSpec("mimir_v2", "danish-foundation-models/DFM-Mimir-v2", "<commit sha>", prefix_lm=True, label="Mimir v2"),
-   ```
+```python
+ModelSpec("mimir_v2", "danish-foundation-models/DFM-Mimir-v2", "<commit sha>", prefix_lm=True, label="Mimir v2"),
+```
 
-2. Run every benchmark for this model. The run is resumable: finished files are skipped.
+Then run it and redraw the charts:
 
-   ```bash
-   bash scripts/evaluate_model.sh --model mimir_v2
-   ```
+```bash
+bash scripts/evaluate_model.sh --model mimir_v2   # resumable
+source env.sh && python -m mimireval.report
+```
 
-3. Render the charts with all models:
+Scores of the five models above are already in `results/`, so only the new model runs. The HalluLens questions are fixed in `prompts/hallulens` so every model gets the same ones. `scripts/run_all.sh` reruns everything.
 
-   ```bash
-   source env.sh && python -m mimireval.report
-   ```
+## Differences from the original setups
 
-The scores of the five models above are in `results/scores` and `results/lmeval`, so step 2 runs only the new model.
-The HalluLens questions are in `prompts/hallulens`. The judging model generated them once, and every model gets the same questions.
-`scripts/run_all.sh` runs every model from zero.
+- TruthfulQA's and HalluLens' original raters are no longer available or only run locally, so an API model replaces them (one model for all HalluLens roles, like the original).
+- HalluLens runs once instead of three times, without GeneratedEntities.
+- LongWiki uses a public copy of FActScore's `enwiki-20230401.db` (`danielli2003/enwiki-20230401.db`) because the original link is rate-limited.
+- `mimireval/tasks/hallulens.py` patches HalluLens at run time (faster title search and cache writes, pandas 3, CPU fallback). The protocol doesn't change.
 
-## Notes
+## Contamination
 
-- The original judging models of TruthfulQA and HalluLens are no longer available or run only locally, so an API model replaces them (one model for all HalluLens roles, as in the original).
-- HalluLens runs one trial instead of three, and GeneratedEntities is left out.
-- The LongWiki database is a public copy of the FActScore `enwiki-20230401.db` on Hugging Face (`danielli2003/enwiki-20230401.db`), because the original link is rate-limited.
-- `mimireval/tasks/hallulens.py` patches HalluLens at run time without changing its protocol: faster title search and cache writes, pandas 3 compatibility, CPU fallback for the retrieval encoder.
+Mimir's training data includes `allenai/tulu-v2-sft-mixture`, which has 120 TruthfulQA questions word for word (mostly in ShareGPT chats). Scores on those questions are not higher than on the rest. It also includes the Flan NIV2 CrowS-Pairs tasks, so the CrowS-Pairs number is not clean.
