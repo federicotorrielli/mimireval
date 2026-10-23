@@ -229,7 +229,7 @@ def examples() -> dict:
 
 def collect() -> dict:
     return {
-        "models": [{"key": k, "label": s.label, "repo": s.repo, "revision": s.revision[:7]} for k, s in MODELS.items()],
+        "models": [{"key": k, "label": s.label, "repo": s.repo, "revision": (s.revision or "local")[:7]} for k, s in MODELS.items()],
         "variants": [{"key": k, "of": of, "label": label} for k, (of, label) in VARIANTS.items()],
         "focus": "mimir",
         "safety": safety_rows(),

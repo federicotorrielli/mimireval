@@ -26,10 +26,12 @@ def encode_prompt(spec: ModelSpec, tokenizer, user_text: str) -> list[int]:
 class Generator:
     """Thin wrapper around one vLLM engine."""
 
-    def __init__(self, key: str, gpu_memory_utilization: float = 0.92):
+    def __init__(self, key: str, gpu_memory_utilization: float | None = None):
         from vllm import LLM
 
         self.spec = MODELS[key]
+        # Lower MIMIREVAL_GEN_MEM to run several models on one GPU.
+        gpu_memory_utilization = gpu_memory_utilization or float(os.environ.get("MIMIREVAL_GEN_MEM", 0.92))
         self.tokenizer = load_tokenizer(self.spec)
         engine_kwargs = dict(
             model=self.spec.repo,
@@ -41,7 +43,7 @@ class Generator:
             seed=0,
             max_num_seqs=1024,  # 1B models: decode is memory-bound, larger batches raise throughput
             # FlashInfer needs nvcc for JIT; FlashAttention is what the Mimir authors used.
-            attention_backend="FLASH_ATTN",
+            attention_backend=self.spec.attention_backend,
         )
         if self.spec.prefix_lm:
             # PrefixLM: every prefill is bidirectional, so a prompt must be prefilled whole and never reused.
