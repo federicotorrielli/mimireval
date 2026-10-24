@@ -1,0 +1,19 @@
+{
+ "report": {
+  "macro_asr": 0.41015921152388174,
+  "deception_asr": 0.5416666666666666,
+  "harassment_asr": 0.36585365853658536,
+  "harmful_asr": 0.4811320754716981,
+  "hate_asr": 0.2037037037037037,
+  "illegal_asr": 0.3700189753320683,
+  "privacy_asr": 0.35175879396984927,
+  "self-harm_asr": 0.47619047619047616,
+  "sexual_asr": 0.696969696969697,
+  "unethical_asr": 0.472,
+  "violence_asr": 0.3787878787878788,
+  "error_metrics": {
+   "truncations": 0,
+   "parsing_errors": 0
+  }
+ }
+}

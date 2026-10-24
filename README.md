@@ -1,19 +1,20 @@
 # mimireval
 
-Safety and hallucination evals for [DFM-Mimir](https://huggingface.co/danish-foundation-models/DFM-Mimir), compared with HRM-Text 1B, Qwen 3.5 0.8B, Gemma 3 1B and OLMo 2 1B.
+Safety and hallucination evals for [DFM-Mimir](https://huggingface.co/danish-foundation-models/DFM-Mimir) and Mimir v1.8, compared with HRM-Text 1B, Qwen 3.5 0.8B and 2B, Gemma 3 1B, Gemma 4 E2B and OLMo 2 1B.
+Mimir v1.8 is not on the Hub yet, so its entry in `mimireval/models.py` points to a local checkpoint.
 Charts are in `report/images/`.
 
 ## What's in it
 
 - Safety: the Ai2 safety-eval suite (HarmBench, StrongREJECT, WildGuardTest, WildJailbreak, DAN, TrustLLM, XSTest, ToxiGen, BBQ, WMDP), SORRY-Bench and OR-Bench-Hard-1K. Rated by WildGuard and the SORRY-Bench / StrongREJECT classifiers.
-- Hallucination: SimpleQA Verified, TruthfulQA (English and Danish MC, plus free answers), HalluLens (PreciseWikiQA, LongWiki, MixedEntities) and the Vectara summaries with HHEM-2.1-Open. DeepSeek-V4.1-Flash rates the free answers, and GLM-5.3-Flash rates them again to check agreement.
+- Hallucination: SimpleQA Verified, TruthfulQA (English and Danish MC, plus free answers), HalluLens (PreciseWikiQA, LongWiki, MixedEntities) and the Vectara summaries with HHEM-2.1-Open. DeepSeek-V4.1-Flash rates the free answers, and GLM-5.3-Flash rates them again to check agreement. The API replaced DeepSeek-V4.1-Flash with DeepSeek-V4.1-Flash-1017 before the three newer models were rated, so Mimir v1.8, Qwen 3.5 2B and Gemma 4 E2B have ratings from the 1017 version.
 - Bias: CrowS-Pairs and BBQ.
 
 Mimir and HRM-Text are prefix LMs (the prompt is bidirectional). If vLLM preempts a request it recomputes prompt and answer together, which breaks these models. So `mimireval/generate.py` only starts a request when its whole length fits in the KV cache, and it crashes if a preemption still happens.
 
 ## Setup
 
-You need a CUDA GPU (we used a B200), [uv](https://docs.astral.sh/uv/) and ~30 GB of disk for the LongWiki Wikipedia dump.
+You need a CUDA GPU (we used a B200 and an RTX 6000 PRO), [uv](https://docs.astral.sh/uv/) and ~30 GB of disk for the LongWiki Wikipedia dump.
 
 ```bash
 cp .env.example .env    # rater API endpoint + HF token
@@ -37,7 +38,7 @@ bash scripts/evaluate_model.sh --model mimir_v2   # resumable
 source env.sh && python -m mimireval.report
 ```
 
-Scores of the five models above are already in `results/`, so only the new model runs. The HalluLens questions are fixed in `prompts/hallulens` so every model gets the same ones. `scripts/run_all.sh` reruns everything.
+Scores of the eight models above are already in `results/`, so only the new model runs. The HalluLens questions are fixed in `prompts/hallulens` so every model gets the same ones. `scripts/run_all.sh` reruns everything.
 
 ## Differences from the original setups
 

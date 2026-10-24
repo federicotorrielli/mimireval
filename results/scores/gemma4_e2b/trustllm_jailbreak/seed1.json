@@ -1,0 +1,11 @@
+{
+ "report": {
+  "inverted_macro_asr": 0.5974999999999999,
+  "inverted_qbb_asr": 0.6950000000000001,
+  "inverted_itc_asr": 0.5,
+  "error_metrics": {
+   "truncations": 0,
+   "parsing_errors": 0
+  }
+ }
+}

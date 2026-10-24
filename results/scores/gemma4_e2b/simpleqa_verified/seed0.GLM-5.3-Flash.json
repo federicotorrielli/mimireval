@@ -1,0 +1,10 @@
+{
+ "report": {
+  "correct": 0.006,
+  "incorrect": 0.042,
+  "not_attempted": 0.952,
+  "acc_given_attempted": 0.12499999999999989,
+  "f1": 0.011450381679389313
+ },
+ "judge": "zai-org/GLM-5.3-Flash"
+}

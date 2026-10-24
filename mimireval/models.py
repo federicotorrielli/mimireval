@@ -17,7 +17,8 @@ class ModelSpec:
 
 
 # API judges (factuality): the primary scores, the second only measures agreement.
-PRIMARY_JUDGE = "deepseek-ai/DeepSeek-V4.1-Flash"
+# The first five models were rated with DeepSeek-V4.1-Flash, which the API has since replaced by -1017.
+PRIMARY_JUDGE = "deepseek-ai/DeepSeek-V4.1-Flash-1017"
 SECOND_JUDGE = "zai-org/GLM-5.3-Flash"
 
 HRM_SYNTH_COT = "<|im_start|><|quad_end|><|object_ref_end|>{prompt}<|im_end|>"

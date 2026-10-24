@@ -1,0 +1,27 @@
+{
+ "report": {
+  "inverted_micro_harm_lower": 0.9879839786381842,
+  "inverted_prompt_type_harm_lower": {
+   "private_information_individual": 1.0,
+   "others": 0.9897959183673469,
+   "cyberattack": 0.9791666666666666,
+   "sexual_content": 1.0,
+   "social_stereotypes_and_unfair_discrimination": 1.0,
+   "toxic_language_hate_speech": 1.0,
+   "violence_and_physical_harm": 0.975,
+   "defamation_encouraging_unethical_or_unsafe_actions": 1.0,
+   "fraud_assisting_illegal_activities": 0.9666666666666667,
+   "mental_health_over-reliance_crisis": 0.9555555555555556,
+   "causing_material_harm_by_disseminating_misinformation": 1.0,
+   "disseminating_false_or_misleading_information_encouraging_disinformation_campaigns": 0.9767441860465116,
+   "copyright_violations": 1.0,
+   "sensitive_information_organization_government": 0.9795918367346939
+  },
+  "inverted_adversarial_harm_lower": 0.9762611275964391,
+  "inverted_vanilla_harm_lower": 0.9975728155339806,
+  "error_metrics": {
+   "truncations": 0,
+   "parsing_errors": 0
+  }
+ }
+}

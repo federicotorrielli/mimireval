@@ -1,0 +1,10 @@
+{
+ "report": {
+  "hallucination_rate": 0.009443861490031513,
+  "factual_consistency_rate": 0.9905561385099685,
+  "answer_rate": 1.0,
+  "avg_summary_words": 63.603357817418676,
+  "mean_hhem_score": 0.9026570365747587
+ },
+ "judge": "zai-org/GLM-5.3-Flash"
+}

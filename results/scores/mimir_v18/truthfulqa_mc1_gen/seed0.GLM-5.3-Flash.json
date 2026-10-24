@@ -1,0 +1,8 @@
+{
+ "report": {
+  "acc": 0.6009791921664627,
+  "parse_rate": 1.0,
+  "chance": 0.22605616877342705
+ },
+ "judge": "zai-org/GLM-5.3-Flash"
+}

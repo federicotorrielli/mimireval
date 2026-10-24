@@ -89,15 +89,6 @@ pre { background: var(--surface); border: 1px solid var(--ring); border-radius: 
 #export .legend { font-size: 16px; margin: 14px 0 6px; }
 #export .legend .key { width: 13px; height: 13px; }
 #export svg text { font-size: 14px; }
-.answers { display: grid; gap: 10px; margin: 18px 0 4px; }
-.answer { display: grid; grid-template-columns: 170px 1fr 150px; gap: 18px; align-items: center; padding: 16px 18px; border: 1px solid var(--ring); border-radius: 12px; font-size: 17px; line-height: 1.45; }
-.answer.focus { background: color-mix(in srgb, var(--surface), var(--focus) 9%); border-color: color-mix(in srgb, var(--ring), var(--focus) 40%); }
-.answer .who { font-weight: 600; }
-.answer .says { color: var(--ink); }
-.answer .label { justify-self: end; font-size: 15px; font-weight: 600; padding: 4px 12px; border-radius: 999px; color: #fff; white-space: nowrap; }
-.answer .label.true { background: var(--correct); }
-.answer .label.false { background: var(--wrong); }
-.reference { font-size: 16px; color: var(--ink-2); margin: 12px 0 0; }
 #export footer { margin-top: 22px; padding-top: 12px; border-top: 1px solid var(--grid); font-size: 14px; color: var(--muted); }
 @media print { .controls, details summary, #theme { display: none; } details { display: block; } }
 </style>
@@ -115,7 +106,7 @@ pre { background: var(--surface); border: 1px solid var(--ring); border-radius: 
 <div class="tiles" id="tiles"></div>
 
 <div class="controls" role="group" aria-label="Compare Mimir with">
-  <span class="label"><span class="key" style="background:var(--focus)"></span>Mimir, compared with</span>
+  <span class="label"><span class="key" style="background:var(--focus)"></span>Mimir v1.8, compared with</span>
   <span id="chips"></span>
 </div>
 
@@ -175,7 +166,7 @@ pre { background: var(--surface); border: 1px solid var(--ring); border-radius: 
   <p id="txt-agree"></p>
   <figure>
     <div class="head"><h3>Agreement between the two judge models</h3></div>
-    <figcaption>Cohen's kappa: 0 is chance agreement, 1 is full agreement. Items pooled over the five models.</figcaption>
+    <figcaption>Cohen's kappa: 0 is chance agreement, 1 is full agreement. Items pooled over all models.</figcaption>
     <div id="c-agree"></div>
     <details><summary>Table</summary><div id="t-agree"></div></details>
   </figure>
@@ -200,7 +191,7 @@ const M = Object.fromEntries([...DATA.models, ...DATA.variants].map(m => [m.key,
 const VARIANT = new Set(DATA.variants.map(v => v.key));
 const FOCUS = DATA.focus;
 const PEERS = DATA.models.map(m => m.key).filter(k => k !== FOCUS);
-let compare = new URLSearchParams(location.search).get("compare") ?? "hrm_text";
+let compare = new URLSearchParams(location.search).get("compare") ?? DATA.compare;
 const pct = (v, d = 0) => v == null ? "n/a" : `${(100 * v).toFixed(d)}%`;
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
@@ -347,7 +338,8 @@ function scatter() {
     const right = x < W - 170;
     txt(g, x + (right ? 12 : -12), y + 4, M[k].label, { "text-anchor": right ? "start" : "end", class: role(k) === "peer" ? "" : "strong" });
     const tags = [...(bestX.includes(k) ? ["best on harmful requests"] : []), ...(bestY.includes(k) ? ["best on safe requests"] : [])];
-    tags.forEach((tag, i) => pill(g, x + (right ? 12 : -12), y + 22 + i * 22, tag, right ? "start" : "end"));
+    const dir = y > (T + H - B) / 2 ? -1 : 1;  // tags point to the middle of the plot
+    tags.forEach((tag, i) => pill(g, x + (right ? 12 : -12), y + dir * (22 + i * 22), tag, right ? "start" : "end"));
     const hit = el("circle", { cx: x, cy: y, r: 16, class: "hit" }, g);
     hover(hit, () => [[`${pct(p.x)} safe on harmful`, M[k].label], [`${pct(p.y)} answered when safe`, ""]]);
   });
@@ -406,12 +398,13 @@ function heatmap() {
   const { categories, values } = DATA.sorry;
   if (!categories.length) return;
   const keys = order(DATA.models.map(m => m.key).filter(k => values[k])).reverse();
-  const W = 900, L = 330, top = 36, cell = 15, colW = (W - L) / keys.length;
+  const W = 900, L = 330, top = 54, cell = 15, colW = (W - L) / keys.length;
   const meanH = 40, s = svg(document.getElementById("c-sorry"), W, top + categories.length * (cell + 2) + meanH + 44);
   keys.forEach((k, j) => {
     const x = L + j * colW + colW / 2;
-    txt(s, x, top - 12, M[k].label, { "text-anchor": "middle", class: role(k) === "peer" ? "" : "strong" });
-    if (role(k) !== "peer") el("circle", { cx: x - M[k].label.length * 3.4 - 10, cy: top - 16, r: 4, fill: COLOR[role(k)] }, s);
+    const words = M[k].label.split(/ (?=\S+$)/);  // size on its own line
+    words.forEach((w, i) => txt(s, x, top - 12 - (words.length - 1 - i) * 16, w, { "text-anchor": "middle", class: role(k) === "peer" ? "" : "strong" }));
+    if (role(k) !== "peer") el("circle", { cx: x - words[0].length * 3.4 - 10, cy: top - 32, r: 4, fill: COLOR[role(k)] }, s);
   });
   categories.forEach((c, i) => {
     const y = top + i * (cell + 2);
@@ -477,26 +470,6 @@ function simpleqaBars() {
     keys.map(k => { const r = DATA.simpleqa[k]; return [M[k].label, pct(r.correct, 1), pct(r.incorrect, 1), pct(r.not_attempted, 1), pct(r.acc_given_attempted, 1), pct(r.f1, 1)]; }));
 }
 
-function exampleCards(id) {
-  const ex = DATA.examples[id], box = document.getElementById(`c-${id}`);
-  const list = document.createElement("div"); list.className = "answers";
-  for (const k of [FOCUS, ...DATA.models.map(m => m.key).filter(k => k !== FOCUS)]) {
-    const a = ex.answers[k], row = document.createElement("div");
-    row.className = "answer" + (k === FOCUS ? " focus" : "");
-    const cell = (cls, s) => { const e = document.createElement("div"); e.className = cls; e.textContent = s; row.appendChild(e); };
-    cell("who", M[k].label);
-    cell("says", a.text);
-    cell(`label ${a.ok}`, `${a.ok ? "✓" : "✗"} ${a.label}`);
-    list.appendChild(row);
-  }
-  box.appendChild(list);
-  if (ex.reference) {
-    const ref = document.createElement("p"); ref.className = "reference";
-    ref.textContent = `Reference answer: ${ex.reference}.`;
-    box.appendChild(ref);
-  }
-}
-
 function agreementBars() {
   const rows = DATA.agreement;
   if (!rows.length) { document.getElementById("s-agree").hidden = true; return; }
@@ -556,8 +529,8 @@ function bestTag(s, x, y, w, h) {
 }
 function scorecard(host, rows, groups) {
   const vs = DATA.variants.map(v => v.key).filter(k => rows.some(r => r.values[k]));
-  const keys = [FOCUS, ...vs, ...PEERS];
-  const W = 1100, L = 470, colW = (W - L) / keys.length, rowH = 52, groupH = 46, headH = 40, winsH = 60;
+  const keys = [FOCUS, ...vs, ...PEERS.filter(k => k === compare), ...PEERS.filter(k => k !== compare)];
+  const W = 1100, L = 470, colW = (W - L) / keys.length, rowH = 52, groupH = 46, headH = 48, winsH = 60;
   const rowsShown = rows.filter(r => keys.some(k => r.values[k]));
   const nGroups = Object.keys(groups).filter(g => rowsShown.some(r => r.group === g)).length;
   const H = headH + rowsShown.length * rowH + nGroups * groupH + winsH;
@@ -565,9 +538,9 @@ function scorecard(host, rows, groups) {
   el("rect", { x: L + 2, y: 0, width: colW - 4, height: H, rx: 10, fill: "var(--focus)", opacity: 0.08 }, s);
   if (vs.length) el("rect", { x: L + colW + 2, y: 0, width: colW * vs.length - 4, height: H, rx: 10, fill: "var(--focus)", opacity: 0.04 }, s);
   keys.forEach((k, j) => {
-    const words = VARIANT.has(k) ? [M[k].label, "more room"] : [M[k].label];
-    words.forEach((w, i) => txt(s, L + j * colW + colW / 2, 26 + (i - (words.length - 1)) * 15, w,
-      { "text-anchor": "middle", class: k === FOCUS ? "strong" : "ink", "font-size": VARIANT.has(k) ? 12.5 : 15 }));
+    const words = VARIANT.has(k) ? [M[k].label, "more room"] : M[k].label.split(/ (?=\S+$)/);  // size on its own line
+    words.forEach((w, i) => txt(s, L + j * colW + colW / 2, 34 + (i - (words.length - 1)) * 18, w,
+      { "text-anchor": "middle", class: role(k) === "peer" ? "ink" : "strong", "font-size": VARIANT.has(k) ? 12.5 : 15 }));
   });
   const wins = Object.fromEntries(keys.map(k => [k, 0]));
   let y = headH, contests = 0;
@@ -590,7 +563,7 @@ function scorecard(host, rows, groups) {
         if (isBest) bestTag(s, L + j * colW + 6, y + 3, colW - 12, rowH - 6);
         txt(s, cx, y + 26, isBest ? `★ ${pct(v)}` : pct(v), { "text-anchor": "middle", class: isBest ? "strong" : "ink", "font-size": isBest ? 17 : 16 });
         el("rect", { x: cx - bw / 2, y: y + 35, width: bw, height: 6, rx: 3, fill: "var(--grid)" }, s);
-        el("rect", { x: cx - bw / 2, y: y + 35, width: Math.max(3, bw * Math.min(1, v)), height: 6, rx: 3, fill: k === FOCUS || VARIANT.has(k) ? "var(--focus)" : "var(--peer)", opacity: VARIANT.has(k) ? 0.5 : 1 }, s);
+        el("rect", { x: cx - bw / 2, y: y + 35, width: Math.max(3, bw * Math.min(1, v)), height: 6, rx: 3, fill: COLOR[role(k)], opacity: VARIANT.has(k) ? 0.5 : 1 }, s);
       });
       el("line", { x1: 0, x2: W, y1: y + rowH, y2: y + rowH, stroke: "var(--grid)", opacity: 0.6 }, s);
       y += rowH;
@@ -606,7 +579,6 @@ const FACT_GROUPS = { truthfulqa: "TruthfulQA: common misconceptions (higher is 
 
 function exportView(id) {
   document.documentElement.classList.add("export");
-  compare = null;
   const box = document.getElementById("export");
   const t = (TEXT.export || {})[id] || {};
   const add = (tag, cls, s) => { const e = document.createElement(tag); if (cls) e.className = cls; if (s) e.textContent = s; box.appendChild(e); return e; };
@@ -622,7 +594,6 @@ function exportView(id) {
   if (id === "sorry") { legendHost.remove(); heatmap(); }
   if (id === "simpleqa") simpleqaBars();
   if (id === "agree") { legendHost.remove(); agreementBars(); }
-  if (id === "truthfulqa" || id === "jailbreak") { legendHost.remove(); exampleCards(id); }
 }
 
 const themeBtn = document.getElementById("theme");
